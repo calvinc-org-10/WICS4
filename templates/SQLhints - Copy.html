@@ -1,0 +1,20 @@
+L10: org_id = 1, L6:  org_id = 2<br>
+(this hint could be a note about data that an app developer might appreciate)
+<br><br>
+<h2>MySQL</h2>
+<h4>show tables;</h4>
+<h4>show create table tablename;</h4>
+
+<h2>SQLite</h2>
+<h4>pragma table_list;</h4>
+<h4>pragma table_info(tablename);</h4>
+
+<h2>Helpful info on specific tables</h2>
+<h4><u>theapp_materiallist</u></h4>
+id, org_id, Material, Description, PartType_id, Plant, SAPMaterialType, SAPMaterialGroup, Price, PriceUnit, Currency, TypicalContainerQty, TypicalPalletQty, Notes
+
+<h4><u>theapp_countschedule</u></h4>
+id, CountDate, Material_id, Requestor, Requestor_userid_id, RequestFilled, Counter, Priority, ReasonScheduled, Notes
+
+<h4><u>theapp_actualcounts</u></h4>
+id, CountDate, CycCtID, Material_id, Counter, LocationOnly, CTD_QTY_Expr, LOCATION, PKGID_Desc, TAGQTY, FLAG_PossiblyNotRecieved, FLAG_MovementDuringCount, Notes

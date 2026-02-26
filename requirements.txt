@@ -1,0 +1,29 @@
+Flask
+Jinja2
+Flask-WTF
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-Login
+
+# calvincTools-CS
+# https://github.com/calvinc-org-10/calvincTools-CS
+
+sshtunnel
+
+typing_extensions==4.12.2
+et_xmlfile==2.0.0
+openpyxl==3.1.5
+qtawesome==1.4.0
+SQLAlchemy==2.0.36
+mysqlclient
+sqlparse==0.5.3
+python-dateutil==2.9.0.post0
+tzdata==2024.2
+
+# Development and Testing Dependencies
+pytest>=7.0
+pytest-cov>=3.0
+pytest-mock>=3.10
+flake8>=4.0
+mypy>=0.950
+
