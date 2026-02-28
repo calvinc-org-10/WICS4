@@ -1,0 +1,590 @@
+from typing import Optional
+import datetime
+import decimal
+
+from sqlalchemy import BigInteger, Date, Double, ForeignKeyConstraint, Index, Integer, SmallInteger, String
+from sqlalchemy.dialects.mysql import DATETIME, INTEGER, LONGTEXT, SMALLINT, TINYINT
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+class Base(DeclarativeBase):
+    pass
+
+
+class WICSAsyncComm(Base):
+    __tablename__ = 'WICS_async_comm'
+
+    reqid: Mapped[str] = mapped_column(String(255), primary_key=True)
+    timestamp: Mapped[Optional[str]] = mapped_column(String(30))
+    processname: Mapped[Optional[str]] = mapped_column(String(256))
+    statecode: Mapped[Optional[str]] = mapped_column(String(64))
+    statetext: Mapped[Optional[str]] = mapped_column(String(512))
+    result: Mapped[Optional[str]] = mapped_column(String(2048))
+    extra1: Mapped[Optional[str]] = mapped_column(String(2048))
+
+
+class WICSOrganizations(Base):
+    __tablename__ = 'WICS_organizations'
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    orgname: Mapped[str] = mapped_column(String(250), nullable=False)
+
+    WICS_materiallist: Mapped[list['WICSMateriallist']] = relationship('WICSMateriallist', back_populates='org')
+    WICS_sapplants_org: Mapped[list['WICSSapplantsOrg']] = relationship('WICSSapplantsOrg', back_populates='org')
+    WICS_sap_sohrecs: Mapped[list['WICSSapSohrecs']] = relationship('WICSSapSohrecs', back_populates='org')
+    WICS_tmpmateriallistupdate: Mapped[list['WICSTmpmateriallistupdate']] = relationship('WICSTmpmateriallistupdate', back_populates='org')
+
+
+class WICSUnitsofmeasure(Base):
+    __tablename__ = 'WICS_unitsofmeasure'
+    __table_args__ = (
+        Index('UOM', 'UOM', unique=True),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    UOM: Mapped[str] = mapped_column(String(50), nullable=False)
+    UOMText: Mapped[str] = mapped_column(String(100), nullable=False)
+    DimensionText: Mapped[str] = mapped_column(String(100), nullable=False)
+    Multiplier1: Mapped[decimal.Decimal] = mapped_column(Double(asdecimal=True), nullable=False)
+
+
+class WICSUploadsapresults(Base):
+    __tablename__ = 'WICS_uploadsapresults'
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    errState: Mapped[Optional[str]] = mapped_column(String(100))
+    errmsg: Mapped[Optional[str]] = mapped_column(String(512))
+    rowNum: Mapped[Optional[int]] = mapped_column(Integer)
+
+
+class WICSWhseparttypes(Base):
+    __tablename__ = 'WICS_whseparttypes'
+    __table_args__ = (
+        Index('PTypeUNQ_PType', 'WhsePartType', unique=True),
+        Index('PTypeUNQ_PTypePrio', 'PartTypePriority', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    WhsePartType: Mapped[str] = mapped_column(String(50), nullable=False)
+    InactivePartType: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    PartTypePriority: Mapped[Optional[int]] = mapped_column(SmallInteger)
+
+    WICS_materiallist: Mapped[list['WICSMateriallist']] = relationship('WICSMateriallist', back_populates='PartType')
+
+
+class WICSWorksheetzones(Base):
+    __tablename__ = 'WICS_worksheetzones'
+
+    zone: Mapped[int] = mapped_column(Integer, primary_key=True)
+    zoneName: Mapped[str] = mapped_column(String(10), nullable=False)
+
+    WICS_location_worksheetzone: Mapped[list['WICSLocationWorksheetzone']] = relationship('WICSLocationWorksheetzone', back_populates='zone')
+
+
+class AuthGroup(Base):
+    __tablename__ = 'auth_group'
+    __table_args__ = (
+        Index('name', 'name', unique=True),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+
+    auth_user_groups: Mapped[list['AuthUserGroups']] = relationship('AuthUserGroups', back_populates='group')
+    auth_group_permissions: Mapped[list['AuthGroupPermissions']] = relationship('AuthGroupPermissions', back_populates='group')
+
+
+class AuthUser(Base):
+    __tablename__ = 'auth_user'
+    __table_args__ = (
+        Index('username', 'username', unique=True),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    password: Mapped[str] = mapped_column(String(128), nullable=False)
+    is_superuser: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    username: Mapped[str] = mapped_column(String(150), nullable=False)
+    first_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
+    is_staff: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    is_active: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    date_joined: Mapped[datetime.datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    last_login: Mapped[Optional[datetime.datetime]] = mapped_column(DATETIME(fsp=6))
+
+    auth_user_groups: Mapped[list['AuthUserGroups']] = relationship('AuthUserGroups', back_populates='user')
+    django_admin_log: Mapped[list['DjangoAdminLog']] = relationship('DjangoAdminLog', back_populates='user')
+    userprofiles_wicsuser: Mapped[list['UserprofilesWicsuser']] = relationship('UserprofilesWicsuser', back_populates='user')
+    auth_user_user_permissions: Mapped[list['AuthUserUserPermissions']] = relationship('AuthUserUserPermissions', back_populates='user')
+
+
+class CMenuCgreetings(Base):
+    __tablename__ = 'cMenu_cgreetings'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    Greeting: Mapped[str] = mapped_column(String(2000), nullable=False)
+
+
+class CMenuCparameters(Base):
+    __tablename__ = 'cMenu_cparameters'
+
+    ParmName: Mapped[str] = mapped_column(String(100), primary_key=True)
+    ParmValue: Mapped[str] = mapped_column(String(512), nullable=False)
+    UserModifiable: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    Comments: Mapped[str] = mapped_column(String(512), nullable=False)
+
+
+class CMenuMenucommands(Base):
+    __tablename__ = 'cMenu_menucommands'
+
+    Command: Mapped[int] = mapped_column(Integer, primary_key=True)
+    CommandText: Mapped[str] = mapped_column(String(250), nullable=False)
+
+    cMenu_menuitems: Mapped[list['CMenuMenuitems']] = relationship('CMenuMenuitems', back_populates='Command')
+
+
+class CMenuMenugroups(Base):
+    __tablename__ = 'cMenu_menugroups'
+    __table_args__ = (
+        Index('GroupName', 'GroupName', unique=True),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    GroupName: Mapped[str] = mapped_column(String(100), nullable=False)
+    GroupInfo: Mapped[str] = mapped_column(String(250), nullable=False)
+
+    cMenu_menuitems: Mapped[list['CMenuMenuitems']] = relationship('CMenuMenuitems', back_populates='MenuGroup')
+    userprofiles_wicsuser: Mapped[list['UserprofilesWicsuser']] = relationship('UserprofilesWicsuser', back_populates='menuGroup')
+
+
+class DjangoContentType(Base):
+    __tablename__ = 'django_content_type'
+    __table_args__ = (
+        Index('django_content_type_app_label_model_76bd3d3b_uniq', 'app_label', 'model', unique=True),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    app_label: Mapped[str] = mapped_column(String(100), nullable=False)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    auth_permission: Mapped[list['AuthPermission']] = relationship('AuthPermission', back_populates='content_type')
+    django_admin_log: Mapped[list['DjangoAdminLog']] = relationship('DjangoAdminLog', back_populates='content_type')
+
+
+class DjangoMigrations(Base):
+    __tablename__ = 'django_migrations'
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    app: Mapped[str] = mapped_column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    applied: Mapped[datetime.datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+
+
+class DjangoQOrmq(Base):
+    __tablename__ = 'django_q_ormq'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(100), nullable=False)
+    payload: Mapped[str] = mapped_column(LONGTEXT, nullable=False)
+    lock: Mapped[Optional[datetime.datetime]] = mapped_column(DATETIME(fsp=6))
+
+
+class DjangoQSchedule(Base):
+    __tablename__ = 'django_q_schedule'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    func: Mapped[str] = mapped_column(String(256), nullable=False)
+    schedule_type: Mapped[str] = mapped_column(String(2), nullable=False)
+    repeats: Mapped[int] = mapped_column(Integer, nullable=False)
+    hook: Mapped[Optional[str]] = mapped_column(String(256))
+    args: Mapped[Optional[str]] = mapped_column(LONGTEXT)
+    kwargs: Mapped[Optional[str]] = mapped_column(LONGTEXT)
+    next_run: Mapped[Optional[datetime.datetime]] = mapped_column(DATETIME(fsp=6))
+    task: Mapped[Optional[str]] = mapped_column(String(100))
+    name: Mapped[Optional[str]] = mapped_column(String(100))
+    minutes: Mapped[Optional[int]] = mapped_column(SMALLINT)
+    cron: Mapped[Optional[str]] = mapped_column(String(100))
+    cluster: Mapped[Optional[str]] = mapped_column(String(100))
+    intended_date_kwarg: Mapped[Optional[str]] = mapped_column(String(100))
+
+
+class DjangoQTask(Base):
+    __tablename__ = 'django_q_task'
+    __table_args__ = (
+        Index('success_index', 'group', 'name', 'func'),
+    )
+
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    func: Mapped[str] = mapped_column(String(256), nullable=False)
+    started: Mapped[datetime.datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    stopped: Mapped[datetime.datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    success: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    hook: Mapped[Optional[str]] = mapped_column(String(256))
+    args: Mapped[Optional[str]] = mapped_column(LONGTEXT)
+    kwargs: Mapped[Optional[str]] = mapped_column(LONGTEXT)
+    result: Mapped[Optional[str]] = mapped_column(LONGTEXT)
+    group: Mapped[Optional[str]] = mapped_column(String(100))
+    cluster: Mapped[Optional[str]] = mapped_column(String(100))
+
+
+class DjangoSession(Base):
+    __tablename__ = 'django_session'
+    __table_args__ = (
+        Index('django_session_expire_date_a5c62663', 'expire_date'),
+    )
+
+    session_key: Mapped[str] = mapped_column(String(40), primary_key=True)
+    session_data: Mapped[str] = mapped_column(LONGTEXT, nullable=False)
+    expire_date: Mapped[datetime.datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+
+
+class WICSLocationWorksheetzone(Base):
+    __tablename__ = 'WICS_location_worksheetzone'
+    __table_args__ = (
+        ForeignKeyConstraint(['zone_id'], ['WICS_worksheetzones.zone'], name='WICS_location_worksh_zone_id_59d6f8f3_fk_WICS_work'),
+        Index('WICS_location_worksh_zone_id_59d6f8f3_fk_WICS_work', 'zone_id')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    location: Mapped[str] = mapped_column(String(50), nullable=False)
+    zone_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    zone: Mapped['WICSWorksheetzones'] = relationship('WICSWorksheetzones', back_populates='WICS_location_worksheetzone')
+
+
+class WICSMateriallist(Base):
+    __tablename__ = 'WICS_materiallist'
+    __table_args__ = (
+        ForeignKeyConstraint(['PartType_id'], ['WICS_whseparttypes.id'], name='WICS_materiallist_PartType_id_86058a4a_fk_WICS_whseparttypes_id'),
+        ForeignKeyConstraint(['org_id'], ['WICS_organizations.id'], name='WICS_materiallist_org_id_6c7bdf21_fk_WICS_organizations_id'),
+        Index('WICS_materi_Materia_a28822_idx', 'Material'),
+        Index('WICS_materi_PartTyp_2289dc_idx', 'PartType_id'),
+        Index('wics_materiallist_realpk', 'org_id', 'Material', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    Material: Mapped[str] = mapped_column(String(100), nullable=False)
+    Description: Mapped[str] = mapped_column(String(250), nullable=False)
+    org_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    SAPMaterialType: Mapped[Optional[str]] = mapped_column(String(100))
+    SAPMaterialGroup: Mapped[Optional[str]] = mapped_column(String(100))
+    Price: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
+    PriceUnit: Mapped[Optional[int]] = mapped_column(INTEGER)
+    Notes: Mapped[Optional[str]] = mapped_column(String(250))
+    PartType_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+    TypicalContainerQty: Mapped[Optional[str]] = mapped_column(String(100))
+    TypicalPalletQty: Mapped[Optional[str]] = mapped_column(String(100))
+    Currency: Mapped[Optional[str]] = mapped_column(String(20))
+    Plant: Mapped[Optional[str]] = mapped_column(String(20))
+    SAPABC: Mapped[Optional[str]] = mapped_column(String(5))
+    SAPMPN: Mapped[Optional[str]] = mapped_column(String(100))
+    SAPManuf: Mapped[Optional[str]] = mapped_column(String(100))
+
+    PartType: Mapped[Optional['WICSWhseparttypes']] = relationship('WICSWhseparttypes', back_populates='WICS_materiallist')
+    org: Mapped['WICSOrganizations'] = relationship('WICSOrganizations', back_populates='WICS_materiallist')
+    WICS_actualcounts: Mapped[list['WICSActualcounts']] = relationship('WICSActualcounts', back_populates='Material')
+    WICS_countschedule: Mapped[list['WICSCountschedule']] = relationship('WICSCountschedule', back_populates='Material')
+    WICS_materialphotos: Mapped[list['WICSMaterialphotos']] = relationship('WICSMaterialphotos', back_populates='Material')
+    WICS_mfrpntomaterial: Mapped[list['WICSMfrpntomaterial']] = relationship('WICSMfrpntomaterial', back_populates='Material')
+    WICS_sap_sohrecs: Mapped[list['WICSSapSohrecs']] = relationship('WICSSapSohrecs', back_populates='Material')
+    WICS_tmpmateriallistupdate: Mapped[list['WICSTmpmateriallistupdate']] = relationship('WICSTmpmateriallistupdate', back_populates='MaterialLink')
+
+
+class WICSSapplantsOrg(Base):
+    __tablename__ = 'WICS_sapplants_org'
+    __table_args__ = (
+        ForeignKeyConstraint(['org_id'], ['WICS_organizations.id'], name='WICS_sapplants_org_org_id_db200562_fk_WICS_organizations_id'),
+        Index('WICS_sapplants_org_org_id_db200562_fk_WICS_organizations_id', 'org_id')
+    )
+
+    SAPPlant: Mapped[str] = mapped_column(String(20), primary_key=True)
+    org_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    org: Mapped['WICSOrganizations'] = relationship('WICSOrganizations', back_populates='WICS_sapplants_org')
+
+
+class AuthPermission(Base):
+    __tablename__ = 'auth_permission'
+    __table_args__ = (
+        ForeignKeyConstraint(['content_type_id'], ['django_content_type.id'], name='auth_permission_content_type_id_2f476e4b_fk_django_co'),
+        Index('auth_permission_content_type_id_codename_01ab375a_uniq', 'content_type_id', 'codename', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    codename: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    content_type: Mapped['DjangoContentType'] = relationship('DjangoContentType', back_populates='auth_permission')
+    auth_group_permissions: Mapped[list['AuthGroupPermissions']] = relationship('AuthGroupPermissions', back_populates='permission')
+    auth_user_user_permissions: Mapped[list['AuthUserUserPermissions']] = relationship('AuthUserUserPermissions', back_populates='permission')
+
+
+class AuthUserGroups(Base):
+    __tablename__ = 'auth_user_groups'
+    __table_args__ = (
+        ForeignKeyConstraint(['group_id'], ['auth_group.id'], name='auth_user_groups_group_id_97559544_fk_auth_group_id'),
+        ForeignKeyConstraint(['user_id'], ['auth_user.id'], name='auth_user_groups_user_id_6a12ed8b_fk_auth_user_id'),
+        Index('auth_user_groups_group_id_97559544_fk_auth_group_id', 'group_id'),
+        Index('auth_user_groups_user_id_group_id_94350c0c_uniq', 'user_id', 'group_id', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    group_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    group: Mapped['AuthGroup'] = relationship('AuthGroup', back_populates='auth_user_groups')
+    user: Mapped['AuthUser'] = relationship('AuthUser', back_populates='auth_user_groups')
+
+
+class CMenuMenuitems(Base):
+    __tablename__ = 'cMenu_menuitems'
+    __table_args__ = (
+        ForeignKeyConstraint(['Command_id'], ['cMenu_menucommands.Command'], name='cMenu_menuitems_Command_id_e5304cf4_fk_cMenu_men'),
+        ForeignKeyConstraint(['MenuGroup_id'], ['cMenu_menugroups.id'], name='cMenu_menuitems_MenuGroup_id_e8382487_fk_cMenu_menugroups_id'),
+        Index('cMenu_menuitems_Command_id_e5304cf4_fk_cMenu_men', 'Command_id'),
+        Index('mnuIUNQ_mGrp_mID_OptNum', 'MenuGroup_id', 'MenuID', 'OptionNumber', unique=True),
+        Index('mnuItUNQ_mGrp_mID_OptNum', 'MenuGroup_id', 'MenuID', 'OptionNumber', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    MenuID: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    OptionNumber: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    OptionText: Mapped[str] = mapped_column(String(250), nullable=False)
+    Argument: Mapped[str] = mapped_column(String(250), nullable=False)
+    PWord: Mapped[str] = mapped_column(String(250), nullable=False)
+    TopLine: Mapped[Optional[int]] = mapped_column(TINYINT(1))
+    BottomLine: Mapped[Optional[int]] = mapped_column(TINYINT(1))
+    Command_id: Mapped[Optional[int]] = mapped_column(Integer)
+    MenuGroup_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+
+    Command: Mapped[Optional['CMenuMenucommands']] = relationship('CMenuMenucommands', back_populates='cMenu_menuitems')
+    MenuGroup: Mapped[Optional['CMenuMenugroups']] = relationship('CMenuMenugroups', back_populates='cMenu_menuitems')
+
+
+class DjangoAdminLog(Base):
+    __tablename__ = 'django_admin_log'
+    __table_args__ = (
+        ForeignKeyConstraint(['content_type_id'], ['django_content_type.id'], name='django_admin_log_content_type_id_c4bce8eb_fk_django_co'),
+        ForeignKeyConstraint(['user_id'], ['auth_user.id'], name='django_admin_log_user_id_c564eba6_fk_auth_user_id'),
+        Index('django_admin_log_content_type_id_c4bce8eb_fk_django_co', 'content_type_id'),
+        Index('django_admin_log_user_id_c564eba6_fk_auth_user_id', 'user_id')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    action_time: Mapped[datetime.datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    object_repr: Mapped[str] = mapped_column(String(200), nullable=False)
+    action_flag: Mapped[int] = mapped_column(SMALLINT, nullable=False)
+    change_message: Mapped[str] = mapped_column(LONGTEXT, nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    object_id: Mapped[Optional[str]] = mapped_column(LONGTEXT)
+    content_type_id: Mapped[Optional[int]] = mapped_column(Integer)
+
+    content_type: Mapped[Optional['DjangoContentType']] = relationship('DjangoContentType', back_populates='django_admin_log')
+    user: Mapped['AuthUser'] = relationship('AuthUser', back_populates='django_admin_log')
+
+
+class UserprofilesWicsuser(Base):
+    __tablename__ = 'userprofiles_wicsuser'
+    __table_args__ = (
+        ForeignKeyConstraint(['menuGroup_id'], ['cMenu_menugroups.id'], name='userprofiles_wicsuse_menuGroup_id_c880aaef_fk_cMenu_men'),
+        ForeignKeyConstraint(['user_id'], ['auth_user.id'], name='userprofiles_wicsuser_user_id_25039a30_fk_auth_user_id'),
+        Index('user_id', 'user_id', unique=True),
+        Index('userprofiles_wicsuse_menuGroup_id_c880aaef_fk_cMenu_men', 'menuGroup_id')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    menuGroup_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+
+    menuGroup: Mapped[Optional['CMenuMenugroups']] = relationship('CMenuMenugroups', back_populates='userprofiles_wicsuser')
+    user: Mapped['AuthUser'] = relationship('AuthUser', back_populates='userprofiles_wicsuser')
+    WICS_countschedule: Mapped[list['WICSCountschedule']] = relationship('WICSCountschedule', back_populates='Requestor_userid')
+
+
+class WICSActualcounts(Base):
+    __tablename__ = 'WICS_actualcounts'
+    __table_args__ = (
+        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_actualcounts_Material_id_6f114fcf_fk_WICS_materiallist_id'),
+        Index('WICS_actual_CountDa_c71e2f_idx', 'CountDate', 'Material_id'),
+        Index('WICS_actual_LOCATIO_55fb12_idx', 'LOCATION'),
+        Index('WICS_actual_Materia_f4d652_idx', 'Material_id')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    CountDate: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    Counter: Mapped[str] = mapped_column(String(250), nullable=False)
+    LOCATION: Mapped[str] = mapped_column(String(250), nullable=False)
+    FLAG_PossiblyNotRecieved: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    FLAG_MovementDuringCount: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    LocationOnly: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    CycCtID: Mapped[Optional[str]] = mapped_column(String(100))
+    CTD_QTY_Expr: Mapped[Optional[str]] = mapped_column(String(500))
+    PKGID_Desc: Mapped[Optional[str]] = mapped_column(String(250))
+    TAGQTY: Mapped[Optional[str]] = mapped_column(String(250))
+    Notes: Mapped[Optional[str]] = mapped_column(String(250))
+
+    Material: Mapped['WICSMateriallist'] = relationship('WICSMateriallist', back_populates='WICS_actualcounts')
+
+
+class WICSCountschedule(Base):
+    __tablename__ = 'WICS_countschedule'
+    __table_args__ = (
+        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_count_schedule__Material_id_625a3c03_fk_WICS_mate'),
+        ForeignKeyConstraint(['Requestor_userid_id'], ['userprofiles_wicsuser.id'], name='WICS_countschedule_Requestor_userid_id_6fcbe696_fk_userprofi'),
+        Index('WICS_counts_CountDa_e42cfd_idx', 'CountDate'),
+        Index('WICS_counts_Materia_5b7e42_idx', 'Material_id'),
+        Index('WICS_countschedule_Requestor_userid_id_6fcbe696_fk_userprofi', 'Requestor_userid_id')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    CountDate: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    Counter: Mapped[Optional[str]] = mapped_column(String(250))
+    Priority: Mapped[Optional[str]] = mapped_column(String(50))
+    ReasonScheduled: Mapped[Optional[str]] = mapped_column(String(250))
+    Notes: Mapped[Optional[str]] = mapped_column(String(250))
+    RequestFilled: Mapped[Optional[int]] = mapped_column(TINYINT(1))
+    Requestor: Mapped[Optional[str]] = mapped_column(String(100))
+    Requestor_userid_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+
+    Material: Mapped['WICSMateriallist'] = relationship('WICSMateriallist', back_populates='WICS_countschedule')
+    Requestor_userid: Mapped[Optional['UserprofilesWicsuser']] = relationship('UserprofilesWicsuser', back_populates='WICS_countschedule')
+
+
+class WICSMaterialphotos(Base):
+    __tablename__ = 'WICS_materialphotos'
+    __table_args__ = (
+        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_materialphotos_Material_id_0a63e651_fk_WICS_materiallist_id'),
+        Index('WICS_materialphotos_Material_id_0a63e651_fk_WICS_materiallist_id', 'Material_id')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    Photo: Mapped[str] = mapped_column(String(100), nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    Notes: Mapped[Optional[str]] = mapped_column(String(250))
+
+    Material: Mapped['WICSMateriallist'] = relationship('WICSMateriallist', back_populates='WICS_materialphotos')
+
+
+class WICSMfrpntomaterial(Base):
+    __tablename__ = 'WICS_mfrpntomaterial'
+    __table_args__ = (
+        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_mfrpntomaterial_Material_id_e1536634_fk_WICS_mate'),
+        Index('WICS_mfrpnt_Manufac_86f9ad_idx', 'Manufacturer'),
+        Index('WICS_mfrpntomaterial_Material_id_e1536634_fk_WICS_mate', 'Material_id'),
+        Index('wics_mfrpntomaterial_mfrpn_unq', 'MfrPN', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    MfrPN: Mapped[str] = mapped_column(String(250), nullable=False)
+    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    Manufacturer: Mapped[Optional[str]] = mapped_column(String(250))
+    Notes: Mapped[Optional[str]] = mapped_column(String(250))
+
+    Material: Mapped['WICSMateriallist'] = relationship('WICSMateriallist', back_populates='WICS_mfrpntomaterial')
+
+
+class WICSSapSohrecs(Base):
+    __tablename__ = 'WICS_sap_sohrecs'
+    __table_args__ = (
+        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_sap_sohrecs_Material_id_f253c0f8_fk_WICS_materiallist_id'),
+        ForeignKeyConstraint(['org_id'], ['WICS_organizations.id'], name='WICS_sap_sohrecs_org_id_7ac7fec9_fk_WICS_organizations_id'),
+        Index('WICS_sap_so_Plant_48325a_idx', 'Plant'),
+        Index('WICS_sap_so_uploade_25ea7d_idx', 'uploaded_at', 'org_id', 'MaterialPartNum'),
+        Index('WICS_sap_sohrecs_Material_id_f253c0f8_fk_WICS_materiallist_id', 'Material_id'),
+        Index('WICS_sap_sohrecs_org_id_7ac7fec9_fk_WICS_organizations_id', 'org_id')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    uploaded_at: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    MaterialPartNum: Mapped[str] = mapped_column(String(100), nullable=False)
+    org_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    Description: Mapped[Optional[str]] = mapped_column(String(250))
+    Plant: Mapped[Optional[str]] = mapped_column(String(20))
+    MaterialType: Mapped[Optional[str]] = mapped_column(String(50))
+    StorageLocation: Mapped[Optional[str]] = mapped_column(String(20))
+    BaseUnitofMeasure: Mapped[Optional[str]] = mapped_column(String(20))
+    Amount: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
+    Currency: Mapped[Optional[str]] = mapped_column(String(20))
+    ValueUnrestricted: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
+    SpecialStock: Mapped[Optional[str]] = mapped_column(String(20))
+    Batch: Mapped[Optional[str]] = mapped_column(String(20))
+    Blocked: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
+    ValueBlocked: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
+    Vendor: Mapped[Optional[str]] = mapped_column(String(20))
+    Material_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+
+    Material: Mapped[Optional['WICSMateriallist']] = relationship('WICSMateriallist', back_populates='WICS_sap_sohrecs')
+    org: Mapped['WICSOrganizations'] = relationship('WICSOrganizations', back_populates='WICS_sap_sohrecs')
+
+
+class WICSTmpmateriallistupdate(Base):
+    __tablename__ = 'WICS_tmpmateriallistupdate'
+    __table_args__ = (
+        ForeignKeyConstraint(['MaterialLink_id'], ['WICS_materiallist.id'], name='WICS_tmpmateriallist_MaterialLink_id_84b18d1a_fk_WICS_mate'),
+        ForeignKeyConstraint(['org_id'], ['WICS_organizations.id'], name='WICS_tmpmateriallist_org_id_8587e963_fk_WICS_orga'),
+        Index('WICS_tmpmat_delMate_ea54b5_idx', 'delMaterialLink'),
+        Index('WICS_tmpmat_org_id_77875e_idx', 'org_id', 'Material'),
+        Index('WICS_tmpmat_recStat_af0cc4_idx', 'recStatus'),
+        Index('WICS_tmpmateriallist_MaterialLink_id_84b18d1a_fk_WICS_mate', 'MaterialLink_id')
+    )
+
+    Material: Mapped[str] = mapped_column(String(100), nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    Description: Mapped[Optional[str]] = mapped_column(String(250))
+    SAPMaterialType: Mapped[Optional[str]] = mapped_column(String(100))
+    SAPMaterialGroup: Mapped[Optional[str]] = mapped_column(String(100))
+    Price: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
+    PriceUnit: Mapped[Optional[int]] = mapped_column(INTEGER)
+    Currency: Mapped[Optional[str]] = mapped_column(String(20))
+    Plant: Mapped[Optional[str]] = mapped_column(String(20))
+    org_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+    MaterialLink_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+    errmsg: Mapped[Optional[str]] = mapped_column(String(256))
+    recStatus: Mapped[Optional[str]] = mapped_column(String(32))
+    delMaterialLink: Mapped[Optional[int]] = mapped_column(Integer)
+    SAPABC: Mapped[Optional[str]] = mapped_column(String(5))
+    SAPMPN: Mapped[Optional[str]] = mapped_column(String(100))
+    SAPManuf: Mapped[Optional[str]] = mapped_column(String(100))
+
+    MaterialLink: Mapped[Optional['WICSMateriallist']] = relationship('WICSMateriallist', back_populates='WICS_tmpmateriallistupdate')
+    org: Mapped[Optional['WICSOrganizations']] = relationship('WICSOrganizations', back_populates='WICS_tmpmateriallistupdate')
+
+
+class AuthGroupPermissions(Base):
+    __tablename__ = 'auth_group_permissions'
+    __table_args__ = (
+        ForeignKeyConstraint(['group_id'], ['auth_group.id'], name='auth_group_permissions_group_id_b120cbf9_fk_auth_group_id'),
+        ForeignKeyConstraint(['permission_id'], ['auth_permission.id'], name='auth_group_permissio_permission_id_84c5c92e_fk_auth_perm'),
+        Index('auth_group_permissio_permission_id_84c5c92e_fk_auth_perm', 'permission_id'),
+        Index('auth_group_permissions_group_id_permission_id_0cd325b0_uniq', 'group_id', 'permission_id', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    group_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    permission_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    group: Mapped['AuthGroup'] = relationship('AuthGroup', back_populates='auth_group_permissions')
+    permission: Mapped['AuthPermission'] = relationship('AuthPermission', back_populates='auth_group_permissions')
+
+
+class AuthUserUserPermissions(Base):
+    __tablename__ = 'auth_user_user_permissions'
+    __table_args__ = (
+        ForeignKeyConstraint(['permission_id'], ['auth_permission.id'], name='auth_user_user_permi_permission_id_1fbb5f2c_fk_auth_perm'),
+        ForeignKeyConstraint(['user_id'], ['auth_user.id'], name='auth_user_user_permissions_user_id_a95ead1b_fk_auth_user_id'),
+        Index('auth_user_user_permi_permission_id_1fbb5f2c_fk_auth_perm', 'permission_id'),
+        Index('auth_user_user_permissions_user_id_permission_id_14a6b632_uniq', 'user_id', 'permission_id', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    permission_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    permission: Mapped['AuthPermission'] = relationship('AuthPermission', back_populates='auth_user_user_permissions')
+    user: Mapped['AuthUser'] = relationship('AuthUser', back_populates='auth_user_user_permissions')

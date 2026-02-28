@@ -1,6 +1,6 @@
 import os
 
-import app
+# import app
 import app_secrets
 from sysver import sysver
 from menuformname_viewMap import FormNameToURL_Map
