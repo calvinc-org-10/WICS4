@@ -5,14 +5,16 @@ from calvincTools.config import calvincTools_config
 from calvincTools import calvincTools_init
 
 # from database import app_db
-from app_secrets import *   # pylint: disable=wildcard-import
+# from app_secrets import *   # pylint: disable=wildcard-import
+import app_secrets
 import config
 
-def create_app(config_name=config_to_use):  # type: ignore
+def create_app(config_name=app_secrets.config_to_use):  # type: ignore
     flskapp = Flask(__name__, static_folder='assets', template_folder='templates')
     flskapp.config.from_object(config.config[config_name])
     flskapp.config.from_mapping(calvincTools_config)
     # This is where you can add any additional configuration settings specific to your application
+    flskapp.config['SQLALCHEMY_BINDS']['cToolsdb'] = app_secrets.cTools_BIND
 
     # the default calvincTools_config is simply:
     # calvincTools_config = {
@@ -46,8 +48,15 @@ def create_app(config_name=config_to_use):  # type: ignore
     app_db.init_app(flskapp)
     # migrate = Migrate(flskapp, cMenu_db)
 
+    from models import cTools_tablenames, cTools_models  # import the cTools models to ensure they are registered with calvincTools before we initialize it. This is necessary for calvincTools to be able to create the tables in the database if they don't already exist. The cTools_models dict is populated in models.py when the cTools models are defined, so we just need to import it here to ensure that the models are registered with calvincTools before we initialize it.
+    from sqlalchemy.orm import relationship
     # initialize calvincTools extensions
-    calvincTools_init(flskapp, app_db)
+    (menuGroups, menuItems, cParameters, cGreetings, User) = calvincTools_init(
+        flskapp, 
+        app_db, 
+        cTools_tablenames=cTools_tablenames, 
+        cTools_models=cTools_models
+        ).cTools_tables
 
     # define routes
     @flskapp.route('/')       # I don't want / to be valid
@@ -55,7 +64,7 @@ def create_app(config_name=config_to_use):  # type: ignore
         """Home page route."""
         return render_template('errors/404.html'), 404
 
-    @flskapp.route(startup_URL)
+    @flskapp.route(app_secrets.startup_URL)
     def startup():
         """Startup page route."""
         return redirect(url_for('auth.login'))  # Redirect to the login page

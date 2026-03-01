@@ -39,10 +39,18 @@ from database import app_db
 
 class cToolsdbBase(DeclarativeBase):
     """Base class for all models, using SQLAlchemy's DeclarativeBase."""
-    pass
+    query = app_db.session.query_property()
 
 cTools_tablenames = {}
 cTools_models = {}
+
+# calvincTools override checklist:
+# 1) If only the legacy table name differs, use cTools_tablenames.
+# 2) If legacy columns differ, provide an override model in cTools_models.
+# 3) Avoid relationship('menuGroups') / relationship('menuItems') strings in
+#    override models unless both sides are in the same SQLAlchemy registry.
+# 4) For legacy tables without ORM ForeignKey metadata, let calvincTools
+#    init_cDatabase attach compatible relationships.
 
 # class menuGroups(cToolsdbBase):
 # cTools field name are same as Legacy WICS cMenuGroup model, so no need to override this class with custom field names.
@@ -63,10 +71,7 @@ class WICS3_menuItems(cToolsdbBase):
     pword: Mapped[str] = mapped_column('PWord', String(250), nullable=False)
     top_line: Mapped[bool|None] = mapped_column('TopLine', Boolean)
     bottom_line: Mapped[bool|None] = mapped_column('BottomLine', Boolean)
-   
-    # Relationships
-    menu_group = relationship('menuGroups', back_populates='menu_items', lazy='joined')
-    
+
     # Unique constraint
     __table_args__ = (
         UniqueConstraint('MenuGroup_id', 'MenuID', 'OptionNumber', 
@@ -77,7 +82,7 @@ class WICS3_menuItems(cToolsdbBase):
         return f'<MenuItem {self.MenuGroup_id},{self.MenuID}/{self.OptionNumber}>'
     
     def __str__(self):
-        return f'{self.menu_group}, {self.MenuID}/{self.OptionNumber}, {self.OptionText}'
+        return f'{self.MenuGroup_id}, {self.MenuID}/{self.OptionNumber}, {self.OptionText}'
 
     def __init__(self, **kw: Any):
         """Initialize a new menuItems instance."""
@@ -151,58 +156,6 @@ class WICS3_cGreetings(cToolsdbBase):
 # cGreetings
 cTools_models['cGreetings'] = WICS3_cGreetings  # add the model to the cTools_models dict for later reference by calvincTools_init()
 
-class User(cToolsdbBase):
-    """
-    User model for authentication with database columns.
-    Inherit from UserMixin to get default implementations for:
-    - is_authenticated, is_active, is_anonymous, get_id()
-    """
-    __tablename__ = cTools_tablenames.get('User', 'users')
-
-    id = db_instance.Column(db_instance.Integer, primary_key=True)
-    username = db_instance.Column(db_instance.String(80), unique=True, nullable=False, index=True)
-    email = db_instance.Column(db_instance.String(120), unique=True, nullable=False, index=True)
-    password_hash = db_instance.Column(db_instance.String(255), nullable=False)
-    FLDis_active = db_instance.Column(db_instance.Boolean, default=True, nullable=False)
-    is_superuser = db_instance.Column(db_instance.Boolean, default=False, nullable=False)
-    permissions = db_instance.Column(db_instance.String(1024), nullable=False, default='')
-    menuGroup = db_instance.Column(db_instance.Integer, db_instance.ForeignKey(menuGroups.id), nullable=True)
-    date_joined = db_instance.Column(db_instance.DateTime, default=datetime.now, nullable=False)
-    last_login = db_instance.Column(db_instance.DateTime, nullable=True)
-
-    @property
-    def is_active(self):
-        return self.FLDis_active
-    
-    def set_password(self, password):
-        """Hash and set the user's password."""
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        """Check if the provided password matches the hash."""
-        verdict = check_password_hash(self.password_hash, password)
-        return verdict
-
-    def has_permission(self, permission_name: str) -> bool:
-        """Check if the user has a specific permission."""
-        if self.is_superuser:
-            return True  # Superusers have all permissions
-        permissions_list = self.permissions.lower().split(',') if self.permissions else []
-        return permission_name.lower() in permissions_list
-
-    def update_last_login(self):
-        """Update the last login timestamp."""
-        self.last_login = datetime.now()
-        db_instance.session.commit()
-
-    def __repr__(self):
-        return f'<User {self.username}>'
-
-    def __init__(self, **kw: Any):
-        """Initialize a user instance."""
-        inspector = inspect(db_instance.engine)
-        if not inspector.has_table(self.__tablename__):
-            # If the table does not exist, create it
-            db_instance.create_all()
-        super().__init__(**kw)
-# User
+# class User(cToolsdbBase):
+# cTools field name are same as Legacy WICS cMenuGroup model, so no need to override this class with custom field names.
+cTools_tablenames['User'] = 'WICS4_users'  # table name is different case than the default, so we need to specify it here

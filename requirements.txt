@@ -9,6 +9,7 @@ Flask-Login
 # https://github.com/calvinc-org-10/calvincTools-CS
 
 sshtunnel
+paramiko<4
 
 typing_extensions==4.12.2
 et_xmlfile==2.0.0
