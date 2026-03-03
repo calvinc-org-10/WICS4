@@ -3,8 +3,8 @@ import os
 # import app
 import app_secrets
 from sysver import sysver
-from menuformname_viewMap import FormNameToURL_Map
-from externalWebPageURL_Map import ExternalWebPageURL_Map
+from menuformname_viewMap4 import FormNameToURL_Map
+from externalWebPageURL_Map4 import ExternalWebPageURL_Map
 
 class Config: 
     SECRET_KEY = os.environ.get('SECRET_KEY') or app_secrets.SECRET_KEY
