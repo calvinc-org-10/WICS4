@@ -1,5 +1,7 @@
 
+import datetime
 from typing import Any
+import decimal
 
 from sqlalchemy import (
     BigInteger, Integer, SmallInteger, Boolean,
@@ -10,6 +12,8 @@ from sqlalchemy import (
     select,
     inspect, 
     )
+
+from sqlalchemy.dialects.mysql import DATETIME, INTEGER, LONGTEXT, SMALLINT, TINYINT
 
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -155,53 +159,23 @@ class Base(DeclarativeBase):
     query = app_db.session.query_property()
 
 
-class WICSAsyncComm(Base):
-    __tablename__ = 'WICS_async_comm'
+##########  ORGANIZATIONS
 
-    reqid: Mapped[str] = mapped_column(String(255), primary_key=True)
-    timestamp: Mapped[Optional[str]] = mapped_column(String(30))
-    processname: Mapped[Optional[str]] = mapped_column(String(256))
-    statecode: Mapped[Optional[str]] = mapped_column(String(64))
-    statetext: Mapped[Optional[str]] = mapped_column(String(512))
-    result: Mapped[Optional[str]] = mapped_column(String(2048))
-    extra1: Mapped[Optional[str]] = mapped_column(String(2048))
-
-
-class WICSOrganizations(Base):
+class Organizations(Base):
     __tablename__ = 'WICS_organizations'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     orgname: Mapped[str] = mapped_column(String(250), nullable=False)
 
-    WICS_materiallist: Mapped[list['WICSMateriallist']] = relationship('WICSMateriallist', back_populates='org')
-    WICS_sapplants_org: Mapped[list['WICSSapplantsOrg']] = relationship('WICSSapplantsOrg', back_populates='org')
-    WICS_sap_sohrecs: Mapped[list['WICSSapSohrecs']] = relationship('WICSSapSohrecs', back_populates='org')
-    WICS_tmpmateriallistupdate: Mapped[list['WICSTmpmateriallistupdate']] = relationship('WICSTmpmateriallistupdate', back_populates='org')
+    materiallist: Mapped[list['MaterialList']] = relationship('MaterialList', back_populates='org')
+    sapplants_org: Mapped[list['SAPPlants_org']] = relationship('SAPPlants_org', back_populates='org')
+    sap_sohrecs: Mapped[list['SAP_SOHRecs']] = relationship('SAP_SOHRecs', back_populates='org')
+    tmpmateriallistupdate: Mapped[list['tmpMaterialListUpdate']] = relationship('tmpMaterialListUpdate', back_populates='org')
 
 
-class WICSUnitsofmeasure(Base):
-    __tablename__ = 'WICS_unitsofmeasure'
-    __table_args__ = (
-        Index('UOM', 'UOM', unique=True),
-    )
+##########  WAREHOUSE PART TYPES
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    UOM: Mapped[str] = mapped_column(String(50), nullable=False)
-    UOMText: Mapped[str] = mapped_column(String(100), nullable=False)
-    DimensionText: Mapped[str] = mapped_column(String(100), nullable=False)
-    Multiplier1: Mapped[decimal.Decimal] = mapped_column(Double(asdecimal=True), nullable=False)
-
-
-class WICSUploadsapresults(Base):
-    __tablename__ = 'WICS_uploadsapresults'
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    errState: Mapped[Optional[str]] = mapped_column(String(100))
-    errmsg: Mapped[Optional[str]] = mapped_column(String(512))
-    rowNum: Mapped[Optional[int]] = mapped_column(Integer)
-
-
-class WICSWhseparttypes(Base):
+class WhsePartTypes(Base):
     __tablename__ = 'WICS_whseparttypes'
     __table_args__ = (
         Index('PTypeUNQ_PType', 'WhsePartType', unique=True),
@@ -211,34 +185,14 @@ class WICSWhseparttypes(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     WhsePartType: Mapped[str] = mapped_column(String(50), nullable=False)
     InactivePartType: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
-    PartTypePriority: Mapped[Optional[int]] = mapped_column(SmallInteger)
+    PartTypePriority: Mapped[int|None] = mapped_column(SmallInteger)
 
-    WICS_materiallist: Mapped[list['WICSMateriallist']] = relationship('WICSMateriallist', back_populates='PartType')
-
-
-class WICSWorksheetzones(Base):
-    __tablename__ = 'WICS_worksheetzones'
-
-    zone: Mapped[int] = mapped_column(Integer, primary_key=True)
-    zoneName: Mapped[str] = mapped_column(String(10), nullable=False)
-
-    WICS_location_worksheetzone: Mapped[list['WICSLocationWorksheetzone']] = relationship('WICSLocationWorksheetzone', back_populates='zone')
-
-class WICSLocationWorksheetzone(Base):
-    __tablename__ = 'WICS_location_worksheetzone'
-    __table_args__ = (
-        ForeignKeyConstraint(['zone_id'], ['WICS_worksheetzones.zone'], name='WICS_location_worksh_zone_id_59d6f8f3_fk_WICS_work'),
-        Index('WICS_location_worksh_zone_id_59d6f8f3_fk_WICS_work', 'zone_id')
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    location: Mapped[str] = mapped_column(String(50), nullable=False)
-    zone_id: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    zone: Mapped['WICSWorksheetzones'] = relationship('WICSWorksheetzones', back_populates='WICS_location_worksheetzone')
+    materiallist: Mapped[list['MaterialList']] = relationship('MaterialList', back_populates='PartType')
 
 
-class WICSMateriallist(Base):
+##########  MATERIALS
+
+class MaterialList(Base):
     __tablename__ = 'WICS_materiallist'
     __table_args__ = (
         ForeignKeyConstraint(['PartType_id'], ['WICS_whseparttypes.id'], name='WICS_materiallist_PartType_id_86058a4a_fk_WICS_whseparttypes_id'),
@@ -252,43 +206,148 @@ class WICSMateriallist(Base):
     Material: Mapped[str] = mapped_column(String(100), nullable=False)
     Description: Mapped[str] = mapped_column(String(250), nullable=False)
     org_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    SAPMaterialType: Mapped[Optional[str]] = mapped_column(String(100))
-    SAPMaterialGroup: Mapped[Optional[str]] = mapped_column(String(100))
-    Price: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
-    PriceUnit: Mapped[Optional[int]] = mapped_column(INTEGER)
-    Notes: Mapped[Optional[str]] = mapped_column(String(250))
-    PartType_id: Mapped[Optional[int]] = mapped_column(BigInteger)
-    TypicalContainerQty: Mapped[Optional[str]] = mapped_column(String(100))
-    TypicalPalletQty: Mapped[Optional[str]] = mapped_column(String(100))
-    Currency: Mapped[Optional[str]] = mapped_column(String(20))
-    Plant: Mapped[Optional[str]] = mapped_column(String(20))
-    SAPABC: Mapped[Optional[str]] = mapped_column(String(5))
-    SAPMPN: Mapped[Optional[str]] = mapped_column(String(100))
-    SAPManuf: Mapped[Optional[str]] = mapped_column(String(100))
+    SAPMaterialType: Mapped[str|None] = mapped_column(String(100))
+    SAPMaterialGroup: Mapped[str|None] = mapped_column(String(100))
+    Price: Mapped[decimal.Decimal|None] = mapped_column(Double(asdecimal=True))
+    PriceUnit: Mapped[int|None] = mapped_column(INTEGER)
+    Notes: Mapped[str|None] = mapped_column(String(250))
+    PartType_id: Mapped[int|None] = mapped_column(BigInteger)
+    TypicalContainerQty: Mapped[str|None] = mapped_column(String(100))
+    TypicalPalletQty: Mapped[str|None] = mapped_column(String(100))
+    Currency: Mapped[str|None] = mapped_column(String(20))
+    Plant: Mapped[str|None] = mapped_column(String(20))
+    SAPABC: Mapped[str|None] = mapped_column(String(5))
+    SAPMPN: Mapped[str|None] = mapped_column(String(100))
+    SAPManuf: Mapped[str|None] = mapped_column(String(100))
 
-    PartType: Mapped[Optional['WICSWhseparttypes']] = relationship('WICSWhseparttypes', back_populates='WICS_materiallist')
-    org: Mapped['WICSOrganizations'] = relationship('WICSOrganizations', back_populates='WICS_materiallist')
-    WICS_actualcounts: Mapped[list['WICSActualcounts']] = relationship('WICSActualcounts', back_populates='Material')
-    WICS_countschedule: Mapped[list['WICSCountschedule']] = relationship('WICSCountschedule', back_populates='Material')
-    WICS_materialphotos: Mapped[list['WICSMaterialphotos']] = relationship('WICSMaterialphotos', back_populates='Material')
-    WICS_mfrpntomaterial: Mapped[list['WICSMfrpntomaterial']] = relationship('WICSMfrpntomaterial', back_populates='Material')
-    WICS_sap_sohrecs: Mapped[list['WICSSapSohrecs']] = relationship('WICSSapSohrecs', back_populates='Material')
-    WICS_tmpmateriallistupdate: Mapped[list['WICSTmpmateriallistupdate']] = relationship('WICSTmpmateriallistupdate', back_populates='MaterialLink')
+    PartType: Mapped['WhsePartTypes|None'] = relationship('WhsePartTypes', back_populates='materiallist')
+    org: Mapped['Organizations'] = relationship('Organizations', back_populates='materiallist')
+    actualcounts: Mapped[list['ActualCounts']] = relationship('ActualCounts', back_populates='Material')
+    countschedule: Mapped[list['CountSchedule']] = relationship('CountSchedule', back_populates='Material')
+    materialphotos: Mapped[list['MaterialPhotos']] = relationship('MaterialPhotos', back_populates='Material')
+    mfrpntomaterial: Mapped[list['MfrPNtoMaterial']] = relationship('MfrPNtoMaterial', back_populates='Material')
+    sap_sohrecs: Mapped[list['SAP_SOHRecs']] = relationship('SAP_SOHRecs', back_populates='Material')
+    tmpmateriallistupdate: Mapped[list['tmpMaterialListUpdate']] = relationship('tmpMaterialListUpdate', back_populates='MaterialLink')
 
-
-class WICSSapplantsOrg(Base):
-    __tablename__ = 'WICS_sapplants_org'
+class tmpMaterialListUpdate(Base):
+    __tablename__ = 'WICS_tmpmateriallistupdate'
     __table_args__ = (
-        ForeignKeyConstraint(['org_id'], ['WICS_organizations.id'], name='WICS_sapplants_org_org_id_db200562_fk_WICS_organizations_id'),
-        Index('WICS_sapplants_org_org_id_db200562_fk_WICS_organizations_id', 'org_id')
+        ForeignKeyConstraint(['MaterialLink_id'], ['WICS_materiallist.id'], name='WICS_tmpmateriallist_MaterialLink_id_84b18d1a_fk_WICS_mate'),
+        ForeignKeyConstraint(['org_id'], ['WICS_organizations.id'], name='WICS_tmpmateriallist_org_id_8587e963_fk_WICS_orga'),
+        Index('WICS_tmpmat_delMate_ea54b5_idx', 'delMaterialLink'),
+        Index('WICS_tmpmat_org_id_77875e_idx', 'org_id', 'Material'),
+        Index('WICS_tmpmat_recStat_af0cc4_idx', 'recStatus'),
+        Index('WICS_tmpmateriallist_MaterialLink_id_84b18d1a_fk_WICS_mate', 'MaterialLink_id')
     )
 
-    SAPPlant: Mapped[str] = mapped_column(String(20), primary_key=True)
-    org_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    Material: Mapped[str] = mapped_column(String(100), nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    Description: Mapped[str|None] = mapped_column(String(250))
+    SAPMaterialType: Mapped[str|None] = mapped_column(String(100))
+    SAPMaterialGroup: Mapped[str|None] = mapped_column(String(100))
+    Price: Mapped[decimal.Decimal|None] = mapped_column(Double(asdecimal=True))
+    PriceUnit: Mapped[int|None] = mapped_column(INTEGER)
+    Currency: Mapped[str|None] = mapped_column(String(20))
+    Plant: Mapped[str|None] = mapped_column(String(20))
+    org_id: Mapped[int|None] = mapped_column(BigInteger)
+    MaterialLink_id: Mapped[int|None] = mapped_column(BigInteger)
+    errmsg: Mapped[str|None] = mapped_column(String(256))
+    recStatus: Mapped[str|None] = mapped_column(String(32))
+    delMaterialLink: Mapped[int|None] = mapped_column(Integer)
+    SAPABC: Mapped[str|None] = mapped_column(String(5))
+    SAPMPN: Mapped[str|None] = mapped_column(String(100))
+    SAPManuf: Mapped[str|None] = mapped_column(String(100))
 
-    org: Mapped['WICSOrganizations'] = relationship('WICSOrganizations', back_populates='WICS_sapplants_org')
+    MaterialLink: Mapped['MaterialList|None'] = relationship('MaterialList', back_populates='tmpmateriallistupdate')
+    org: Mapped['Organizations|None'] = relationship('Organizations', back_populates='tmpmateriallistupdate')
 
-class WICSActualcounts(Base):
+class MaterialPhotos(Base):
+    __tablename__ = 'WICS_materialphotos'
+    __table_args__ = (
+        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_materialphotos_Material_id_0a63e651_fk_WICS_materiallist_id'),
+        Index('WICS_materialphotos_Material_id_0a63e651_fk_WICS_materiallist_id', 'Material_id')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    Photo: Mapped[str] = mapped_column(String(100), nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    Notes: Mapped[str|None] = mapped_column(String(250))
+
+    Material: Mapped['MaterialList'] = relationship('MaterialList', back_populates='materialphotos')
+
+class MfrPNtoMaterial(Base):
+    __tablename__ = 'WICS_mfrpntomaterial'
+    __table_args__ = (
+        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_mfrpntomaterial_Material_id_e1536634_fk_WICS_mate'),
+        Index('WICS_mfrpnt_Manufac_86f9ad_idx', 'Manufacturer'),
+        Index('WICS_mfrpntomaterial_Material_id_e1536634_fk_WICS_mate', 'Material_id'),
+        Index('wics_mfrpntomaterial_mfrpn_unq', 'MfrPN', unique=True)
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    MfrPN: Mapped[str] = mapped_column(String(250), nullable=False)
+    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    Manufacturer: Mapped[str|None] = mapped_column(String(250))
+    Notes: Mapped[str|None] = mapped_column(String(250))
+
+    Material: Mapped['MaterialList'] = relationship('MaterialList', back_populates='mfrpntomaterial')
+
+
+##########  SCHEDULED COUNTS
+
+class CountSchedule(Base):
+    __tablename__ = 'WICS_countschedule'
+    __table_args__ = (
+        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_count_schedule__Material_id_625a3c03_fk_WICS_mate'),
+        ForeignKeyConstraint(['Requestor_userid_id'], ['userprofiles_wicsuser.id'], name='WICS_countschedule_Requestor_userid_id_6fcbe696_fk_userprofi'),
+        Index('WICS_counts_CountDa_e42cfd_idx', 'CountDate'),
+        Index('WICS_counts_Materia_5b7e42_idx', 'Material_id'),
+        Index('WICS_countschedule_Requestor_userid_id_6fcbe696_fk_userprofi', 'Requestor_userid_id')
+    )
+
+    from calvincTools import User  # import here to avoid circular import issues with cTools_models['User'] = User in calvincTools_init()
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    CountDate: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    Counter: Mapped[str|None] = mapped_column(String(250))
+    Priority: Mapped[str|None] = mapped_column(String(50))
+    ReasonScheduled: Mapped[str|None] = mapped_column(String(250))
+    Notes: Mapped[str|None] = mapped_column(String(250))
+    RequestFilled: Mapped[int|None] = mapped_column(TINYINT(1))
+    Requestor: Mapped[str|None] = mapped_column(String(100))
+    Requestor_userid_id: Mapped[int|None] = mapped_column(BigInteger)
+
+    Material: Mapped['MaterialList'] = relationship('MaterialList', back_populates='countschedule')
+    Requestor_userid: Mapped['User|None'] = relationship('User')
+
+class WorksheetZones(Base):
+    __tablename__ = 'WICS_worksheetzones'
+
+    zone: Mapped[int] = mapped_column(Integer, primary_key=True)
+    zoneName: Mapped[str] = mapped_column(String(10), nullable=False)
+
+    location_worksheetzone: Mapped[list['Location_WorksheetZone']] = relationship('Location_WorksheetZone', back_populates='zone')
+
+class Location_WorksheetZone(Base):
+    __tablename__ = 'WICS_location_worksheetzone'
+    __table_args__ = (
+        ForeignKeyConstraint(['zone_id'], ['WICS_worksheetzones.zone'], name='WICS_location_worksh_zone_id_59d6f8f3_fk_WICS_work'),
+        Index('WICS_location_worksh_zone_id_59d6f8f3_fk_WICS_work', 'zone_id')
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    location: Mapped[str] = mapped_column(String(50), nullable=False)
+    zone_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    zone: Mapped['WorksheetZones'] = relationship('WorksheetZones', back_populates='location_worksheetzone')
+
+
+##########  ACTUAL COUNTS
+
+class ActualCounts(Base):
     __tablename__ = 'WICS_actualcounts'
     __table_args__ = (
         ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_actualcounts_Material_id_6f114fcf_fk_WICS_materiallist_id'),
@@ -305,76 +364,18 @@ class WICSActualcounts(Base):
     FLAG_MovementDuringCount: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
     Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     LocationOnly: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
-    CycCtID: Mapped[Optional[str]] = mapped_column(String(100))
-    CTD_QTY_Expr: Mapped[Optional[str]] = mapped_column(String(500))
-    PKGID_Desc: Mapped[Optional[str]] = mapped_column(String(250))
-    TAGQTY: Mapped[Optional[str]] = mapped_column(String(250))
-    Notes: Mapped[Optional[str]] = mapped_column(String(250))
+    CycCtID: Mapped[str|None] = mapped_column(String(100))
+    CTD_QTY_Expr: Mapped[str|None] = mapped_column(String(500))
+    PKGID_Desc: Mapped[str|None] = mapped_column(String(250))
+    TAGQTY: Mapped[str|None] = mapped_column(String(250))
+    Notes: Mapped[str|None] = mapped_column(String(250))
 
-    Material: Mapped['WICSMateriallist'] = relationship('WICSMateriallist', back_populates='WICS_actualcounts')
-
-
-class WICSCountschedule(Base):
-    __tablename__ = 'WICS_countschedule'
-    __table_args__ = (
-        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_count_schedule__Material_id_625a3c03_fk_WICS_mate'),
-        ForeignKeyConstraint(['Requestor_userid_id'], ['userprofiles_wicsuser.id'], name='WICS_countschedule_Requestor_userid_id_6fcbe696_fk_userprofi'),
-        Index('WICS_counts_CountDa_e42cfd_idx', 'CountDate'),
-        Index('WICS_counts_Materia_5b7e42_idx', 'Material_id'),
-        Index('WICS_countschedule_Requestor_userid_id_6fcbe696_fk_userprofi', 'Requestor_userid_id')
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    CountDate: Mapped[datetime.date] = mapped_column(Date, nullable=False)
-    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    Counter: Mapped[Optional[str]] = mapped_column(String(250))
-    Priority: Mapped[Optional[str]] = mapped_column(String(50))
-    ReasonScheduled: Mapped[Optional[str]] = mapped_column(String(250))
-    Notes: Mapped[Optional[str]] = mapped_column(String(250))
-    RequestFilled: Mapped[Optional[int]] = mapped_column(TINYINT(1))
-    Requestor: Mapped[Optional[str]] = mapped_column(String(100))
-    Requestor_userid_id: Mapped[Optional[int]] = mapped_column(BigInteger)
-
-    Material: Mapped['WICSMateriallist'] = relationship('WICSMateriallist', back_populates='WICS_countschedule')
-    Requestor_userid: Mapped[Optional['UserprofilesWicsuser']] = relationship('UserprofilesWicsuser', back_populates='WICS_countschedule')
+    Material: Mapped['MaterialList'] = relationship('MaterialList', back_populates='actualcounts')
 
 
-class WICSMaterialphotos(Base):
-    __tablename__ = 'WICS_materialphotos'
-    __table_args__ = (
-        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_materialphotos_Material_id_0a63e651_fk_WICS_materiallist_id'),
-        Index('WICS_materialphotos_Material_id_0a63e651_fk_WICS_materiallist_id', 'Material_id')
-    )
+##########  SAP
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    Photo: Mapped[str] = mapped_column(String(100), nullable=False)
-    height: Mapped[int] = mapped_column(Integer, nullable=False)
-    width: Mapped[int] = mapped_column(Integer, nullable=False)
-    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    Notes: Mapped[Optional[str]] = mapped_column(String(250))
-
-    Material: Mapped['WICSMateriallist'] = relationship('WICSMateriallist', back_populates='WICS_materialphotos')
-
-
-class WICSMfrpntomaterial(Base):
-    __tablename__ = 'WICS_mfrpntomaterial'
-    __table_args__ = (
-        ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_mfrpntomaterial_Material_id_e1536634_fk_WICS_mate'),
-        Index('WICS_mfrpnt_Manufac_86f9ad_idx', 'Manufacturer'),
-        Index('WICS_mfrpntomaterial_Material_id_e1536634_fk_WICS_mate', 'Material_id'),
-        Index('wics_mfrpntomaterial_mfrpn_unq', 'MfrPN', unique=True)
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    MfrPN: Mapped[str] = mapped_column(String(250), nullable=False)
-    Material_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    Manufacturer: Mapped[Optional[str]] = mapped_column(String(250))
-    Notes: Mapped[Optional[str]] = mapped_column(String(250))
-
-    Material: Mapped['WICSMateriallist'] = relationship('WICSMateriallist', back_populates='WICS_mfrpntomaterial')
-
-
-class WICSSapSohrecs(Base):
+class SAP_SOHRecs(Base):
     __tablename__ = 'WICS_sap_sohrecs'
     __table_args__ = (
         ForeignKeyConstraint(['Material_id'], ['WICS_materiallist.id'], name='WICS_sap_sohrecs_Material_id_f253c0f8_fk_WICS_materiallist_id'),
@@ -389,54 +390,70 @@ class WICSSapSohrecs(Base):
     uploaded_at: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     MaterialPartNum: Mapped[str] = mapped_column(String(100), nullable=False)
     org_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    Description: Mapped[Optional[str]] = mapped_column(String(250))
-    Plant: Mapped[Optional[str]] = mapped_column(String(20))
-    MaterialType: Mapped[Optional[str]] = mapped_column(String(50))
-    StorageLocation: Mapped[Optional[str]] = mapped_column(String(20))
-    BaseUnitofMeasure: Mapped[Optional[str]] = mapped_column(String(20))
-    Amount: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
-    Currency: Mapped[Optional[str]] = mapped_column(String(20))
-    ValueUnrestricted: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
-    SpecialStock: Mapped[Optional[str]] = mapped_column(String(20))
-    Batch: Mapped[Optional[str]] = mapped_column(String(20))
-    Blocked: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
-    ValueBlocked: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
-    Vendor: Mapped[Optional[str]] = mapped_column(String(20))
-    Material_id: Mapped[Optional[int]] = mapped_column(BigInteger)
+    Description: Mapped[str] = mapped_column(String(250))
+    Plant: Mapped[str|None] = mapped_column(String(20))
+    MaterialType: Mapped[str|None] = mapped_column(String(50))
+    StorageLocation: Mapped[str|None] = mapped_column(String(20))
+    BaseUnitofMeasure: Mapped[str|None] = mapped_column(String(20))
+    Amount: Mapped[decimal.Decimal|None] = mapped_column(Double(asdecimal=True))
+    Currency: Mapped[str|None] = mapped_column(String(20))
+    ValueUnrestricted: Mapped[decimal.Decimal|None] = mapped_column(Double(asdecimal=True))
+    SpecialStock: Mapped[str|None] = mapped_column(String(20))
+    Batch: Mapped[str|None] = mapped_column(String(20))
+    Blocked: Mapped[decimal.Decimal|None] = mapped_column(Double(asdecimal=True))
+    ValueBlocked: Mapped[decimal.Decimal|None] = mapped_column(Double(asdecimal=True))
+    Vendor: Mapped[str|None] = mapped_column(String(20))
+    Material_id: Mapped[int|None] = mapped_column(BigInteger)
 
-    Material: Mapped[Optional['WICSMateriallist']] = relationship('WICSMateriallist', back_populates='WICS_sap_sohrecs')
-    org: Mapped['WICSOrganizations'] = relationship('WICSOrganizations', back_populates='WICS_sap_sohrecs')
+    Material: Mapped['MaterialList'|None] = relationship('MaterialList', back_populates='sap_sohrecs')
+    org: Mapped['Organizations'] = relationship('Organizations', back_populates='sap_sohrecs')
 
-
-class WICSTmpmateriallistupdate(Base):
-    __tablename__ = 'WICS_tmpmateriallistupdate'
+class SAPPlants_org(Base):
+    __tablename__ = 'WICS_sapplants_org'
     __table_args__ = (
-        ForeignKeyConstraint(['MaterialLink_id'], ['WICS_materiallist.id'], name='WICS_tmpmateriallist_MaterialLink_id_84b18d1a_fk_WICS_mate'),
-        ForeignKeyConstraint(['org_id'], ['WICS_organizations.id'], name='WICS_tmpmateriallist_org_id_8587e963_fk_WICS_orga'),
-        Index('WICS_tmpmat_delMate_ea54b5_idx', 'delMaterialLink'),
-        Index('WICS_tmpmat_org_id_77875e_idx', 'org_id', 'Material'),
-        Index('WICS_tmpmat_recStat_af0cc4_idx', 'recStatus'),
-        Index('WICS_tmpmateriallist_MaterialLink_id_84b18d1a_fk_WICS_mate', 'MaterialLink_id')
+        ForeignKeyConstraint(['org_id'], ['WICS_organizations.id'], name='WICS_sapplants_org_org_id_db200562_fk_WICS_organizations_id'),
+        Index('WICS_sapplants_org_org_id_db200562_fk_WICS_organizations_id', 'org_id')
     )
 
-    Material: Mapped[str] = mapped_column(String(100), nullable=False)
+    SAPPlant: Mapped[str] = mapped_column(String(20), primary_key=True)
+    org_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    org: Mapped['Organizations'] = relationship('Organizations', back_populates='sapplants_org')
+
+class UploadSAPResults(Base):
+    __tablename__ = 'WICS_uploadsapresults'
+
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    Description: Mapped[Optional[str]] = mapped_column(String(250))
-    SAPMaterialType: Mapped[Optional[str]] = mapped_column(String(100))
-    SAPMaterialGroup: Mapped[Optional[str]] = mapped_column(String(100))
-    Price: Mapped[Optional[decimal.Decimal]] = mapped_column(Double(asdecimal=True))
-    PriceUnit: Mapped[Optional[int]] = mapped_column(INTEGER)
-    Currency: Mapped[Optional[str]] = mapped_column(String(20))
-    Plant: Mapped[Optional[str]] = mapped_column(String(20))
-    org_id: Mapped[Optional[int]] = mapped_column(BigInteger)
-    MaterialLink_id: Mapped[Optional[int]] = mapped_column(BigInteger)
-    errmsg: Mapped[Optional[str]] = mapped_column(String(256))
-    recStatus: Mapped[Optional[str]] = mapped_column(String(32))
-    delMaterialLink: Mapped[Optional[int]] = mapped_column(Integer)
-    SAPABC: Mapped[Optional[str]] = mapped_column(String(5))
-    SAPMPN: Mapped[Optional[str]] = mapped_column(String(100))
-    SAPManuf: Mapped[Optional[str]] = mapped_column(String(100))
+    errState: Mapped[str|None] = mapped_column(String(100))
+    errmsg: Mapped[str|None] = mapped_column(String(512))
+    rowNum: Mapped[int|None] = mapped_column(Integer)
 
-    MaterialLink: Mapped[Optional['WICSMateriallist']] = relationship('WICSMateriallist', back_populates='WICS_tmpmateriallistupdate')
-    org: Mapped[Optional['WICSOrganizations']] = relationship('WICSOrganizations', back_populates='WICS_tmpmateriallistupdate')
+class UnitsOfMeasure(Base):
+    __tablename__ = 'WICS_unitsofmeasure'
+    __table_args__ = (
+        Index('UOM', 'UOM', unique=True),
+    )
 
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    UOM: Mapped[str] = mapped_column(String(50), nullable=False)
+    UOMText: Mapped[str] = mapped_column(String(100), nullable=False)
+    DimensionText: Mapped[str] = mapped_column(String(100), nullable=False)
+    Multiplier1: Mapped[decimal.Decimal] = mapped_column(Double(asdecimal=True), nullable=False)
+
+
+##########  ASYNC COMM
+
+class async_comm(Base):
+    __tablename__ = 'WICS_async_comm'
+
+    reqid: Mapped[str] = mapped_column(String(255), primary_key=True)
+    timestamp: Mapped[str|None] = mapped_column(String(30))
+    processname: Mapped[str|None] = mapped_column(String(256))
+    statecode: Mapped[str|None] = mapped_column(String(64))
+    statetext: Mapped[str|None] = mapped_column(String(512))
+    result: Mapped[str|None] = mapped_column(String(2048))
+    extra1: Mapped[str|None] = mapped_column(String(2048))
+
+
+########## 
+########## 
