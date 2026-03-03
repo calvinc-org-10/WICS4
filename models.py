@@ -307,7 +307,7 @@ class CountSchedule(Base):
         Index('WICS_countschedule_Requestor_userid_id_6fcbe696_fk_userprofi', 'Requestor_userid_id')
     )
 
-    from calvincTools import User  # import here to avoid circular import issues with cTools_models['User'] = User in calvincTools_init()
+    from calvincTools.models import User  # import here to avoid circular import issues with cTools_models['User'] = User in calvincTools_init()
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     CountDate: Mapped[datetime.date] = mapped_column(Date, nullable=False)
@@ -405,7 +405,7 @@ class SAP_SOHRecs(Base):
     Vendor: Mapped[str|None] = mapped_column(String(20))
     Material_id: Mapped[int|None] = mapped_column(BigInteger)
 
-    Material: Mapped['MaterialList'|None] = relationship('MaterialList', back_populates='sap_sohrecs')
+    Material: Mapped['MaterialList|None'] = relationship('MaterialList', back_populates='sap_sohrecs')
     org: Mapped['Organizations'] = relationship('Organizations', back_populates='sap_sohrecs')
 
 class SAPPlants_org(Base):

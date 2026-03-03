@@ -19,6 +19,7 @@ class Config:
     PERMANENT_SESSION_LIFETIME = 3600 * 24  # 24 hours
 
     # app specific
+    DEV_MODE = app_secrets.sysver_key == 'DEV'
     APP_VERSION = sysver[app_secrets.sysver_key]
     APP_LOGO_URL = '/assets/App-Logo.png'
     APP_NEWS_HTMLFILE = 'appNews.html'
