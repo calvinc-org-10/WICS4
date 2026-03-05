@@ -1,10 +1,11 @@
 
-_pkgname='an App that uses calvincTools-CS'
+_pkgname='WICS4'
 _base_ver_major=1
 _base_ver_minor=0
 _base_ver_patch='0'
-_ver_date='2026-02-21'
-_base_ver = f'{_base_ver_major}.{_base_ver_minor}.{_base_ver_patch}'
+_ver_date='2026-03-05-1200'
+# _base_ver = f'{_base_ver_major}.{_base_ver_minor}.{_base_ver_patch}'
+_base_ver = f'{_ver_date}'      # date versioning until things get stable, then switch to semantic versioning
 __version__ = _base_ver
 sysver = {
     'DEV': f'DEV{_base_ver}', 
