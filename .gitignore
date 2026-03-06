@@ -1,7 +1,8 @@
 # specific to apps which use calvincTools
 app_secrets.py
-templates/SQLhints.html
 app_secrets/
+templates/SQLhints.html
+templates/appNews.html
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
