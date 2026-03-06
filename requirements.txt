@@ -6,10 +6,7 @@ Flask-Migrate
 Flask-Login
 
 # calvincTools-CS
-# https://github.com/calvinc-org-10/calvincTools-CS
-
-sshtunnel
-paramiko<3
+git+https://github.com/calvinc-org-10/calvincTools-CS
 
 typing_extensions==4.12.2
 et_xmlfile==2.0.0
