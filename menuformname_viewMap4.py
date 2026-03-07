@@ -1,4 +1,4 @@
-# import _newcode
+import _newcode
 # import views referenced in the FormNameToURL_Map below
 
 
@@ -29,7 +29,8 @@ FormNameToURL_Map = {}
 # FormNameToURL_Map['frmParts-By-Type-with-LastCounts'.lower()] = ('MatlByPartType', None)
 # FormNameToURL_Map['rptMaterialByLastCount'.lower()] = ('MatlByLastCountDate', None)
 # FormNameToURL_Map['rptMaterialByDESCValue'.lower()] = ('MatlByDESCValue', None)
-# FormNameToURL_Map['matllistupdt'.lower()] = ('', forms.UpdateMatlListfromSAP)
+# FormNameToURL_Map['matllistupdt'.lower()] = ('UpdateMatlListfromSAP', _newcode.updtMatlList.fnUpdateMatlListfromSAP)
+FormNameToURL_Map['matllistupdt'.lower()] = (None, _newcode.updtMatlList.fnUpdateMatlListfromSAP)
 # FormNameToURL_Map['frmRandCountScheduler'.lower()] = (None, None)
 
 # FormNameToURL_Map['frmCountScheduleEntry'.lower()] = ('CountScheduleForm', forms.CountScheduleRecordForm)
