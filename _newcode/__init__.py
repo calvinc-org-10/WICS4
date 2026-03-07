@@ -1,1 +1,1 @@
-import updtMatlList
+from . import updtMatlList
