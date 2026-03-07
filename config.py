@@ -37,7 +37,7 @@ class DevelopmentConfig(Config):
         app_secrets.database_uri
         # f'sqlite:///{app_secrets.cMenu_dbPath}'
         # 'sqlite:///dev_database.db'
-    SQLALCHEMY_ENGINE_OPTIONS = app_secrets.SQLALCHEMY_ENGINE_OPTIONS if hasattr(app_secrets,'SQLALCHEMY_ENGINE_OPTIONS') else {}
+    SQLALCHEMY_ENGINE_OPTIONS = getattr(app_secrets, 'SQLALCHEMY_ENGINE_OPTIONS', {})
     SQLALCHEMY_ECHO = True
 
 
@@ -47,7 +47,7 @@ class ProductionConfig(Config):
         app_secrets.database_uri
         # f'sqlite:///{app_secrets.cMenu_dbPath}'
         # 'sqlite:///prod_database.db'
-    SQLALCHEMY_ENGINE_OPTIONS = app_secrets.SQLALCHEMY_ENGINE_OPTIONS if hasattr(app_secrets,'SQLALCHEMY_ENGINE_OPTIONS') else {}
+    SQLALCHEMY_ENGINE_OPTIONS = getattr(app_secrets, 'SQLALCHEMY_ENGINE_OPTIONS', {})
 
     # Enhanced security for production
     SESSION_COOKIE_SECURE = True  # HTTPS only
