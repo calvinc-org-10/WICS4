@@ -454,6 +454,48 @@ class async_comm(Base):
     result: Mapped[str|None] = mapped_column(String(2048))
     extra1: Mapped[str|None] = mapped_column(String(2048))
 
+    @classmethod
+    def get_async_comm_state(cls, reqid):
+        return cls.query.filter_by(reqid=reqid).first()
+    @classmethod
+    def async_comm_exists(cls, reqid):
+        return cls.get_async_comm_state(reqid=reqid) is not None
+    
+    @classmethod
+    def set_async_comm_state(cls,
+            reqid, 
+            statecode,
+            statetext,
+            processname = None,
+            result = None,
+            extra1 = None
+        ):
+        
+        acomm = cls.query.filter_by(reqid=reqid).first()
+        
+        if not acomm:
+            acomm = cls(reqid=reqid)
+        
+        acomm.statecode = statecode
+        acomm.statetext = statetext
+        acomm.result = result
+        acomm.extra1 = extra1
+        if processname is not None: acomm.processname = processname
+        acomm.timestamp = datetime.datetime.now().__str__()
+        
+        app_db.session.add(acomm)
+        app_db.session.commit()
+        
+        return acomm
 
+    @classmethod
+    def delete_async_comm(cls, reqid):
+        acomm = cls.query.filter_by(reqid=reqid).first()
+        if acomm:
+            app_db.session.delete(acomm)
+            app_db.session.commit()
+            return True
+        return False
+    
 ########## 
 ########## 

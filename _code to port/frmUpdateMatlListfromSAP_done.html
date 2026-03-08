@@ -1,0 +1,108 @@
+{% extends "WICS_common.html" %}
+{% load widget_tweaks %}
+{% load static %}
+
+{% block tTitle %}Update Material List from SAP MM60 Spreadsheet{% endblock %}
+{% block formName %}Update Material List Finished{% endblock %}
+
+{% block boddy %}
+<hr>
+{% csrf_token %}
+{% if ImpErrList %}
+<hr>
+<b>Errors:</b>
+<ul>
+    {% for err in ImpErrList %}
+    <li>
+        <b>{{ err.errmsg }}</b>
+    </li>
+    {% empty %}
+        <li><b>None!</b></li>
+    {% endfor %}
+</ul>
+{% endif %}
+<hr>
+Material Added:
+<ul>
+    {% for rec in AddedMatls %}
+        <li>
+        id {{ rec.MaterialLink_id }} - 
+        {{ rec.org }} -
+        {{ rec.Material }} - 
+        {{ rec.Description }} - 
+        {{ rec.SAPMaterialType }} -
+        {{ rec.SAPMaterialGroup }} -
+        {{ rec.Price }} -
+        {{ rec.PriceUnit }}
+        </li>
+    {% empty %}
+        <li><b>None!</b></li>
+    {% endfor %}
+</ul>
+<hr>
+Material Removed:
+<ul>
+    {% for rec in RemvdMatls %}
+        <li>
+        {{ rec.recStatus }} - 
+        {{ rec.org }} -
+        {{ rec.Material }} - 
+        {{ rec.Description }}
+        </li>
+    {% empty %}
+        <li><b>None!</b></li>
+    {% endfor %}
+</ul>
+
+<!-- form footer -->
+<div class="container">
+    <div class="row mx-auto max-width=100%">
+        <div class="col-4">
+            <input type="hidden" name="NextPhase" value="99-DONE"></input>
+        </div>
+        <div class="col-6"></div>
+        <div class="col">
+            <button id="close_btn" type="button">
+                <img src="{% static 'stop-road-sign-icon.svg' %}" width="20" height="20"></img>
+                Close Form
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+
+    $( document ).ready(function() {
+        const formdata = new FormData();
+        formdata.append('phase', 'resultspresented')
+        csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        $.ajax({
+            type: 'POST', 
+            data: formdata,
+            headers: {'X-CSRFToken': csrftoken},
+            processData: false, 
+            contentType: false, 
+            success: function(data) {}
+            });
+
+        // announce the results
+        speak("The Material List is Updated from your spreadsheet."
+            + "  There were {{ ImpErrList|length }} rows with errors." 
+            + "  {{ AddedMatls|length }} Material records were added." 
+            + "  {{ RemvdMatls|length }} Material records were removed." 
+        );
+    });    
+
+    /****
+     document.body.onbeforeunload = function() {
+        document.getElementById("wait_spinner").style.display = "block";
+        }
+    ****/
+
+    document.getElementById("close_btn").addEventListener("click",
+        function(){
+            window.close();
+        });
+
+</script>
+
+{% endblock %}
