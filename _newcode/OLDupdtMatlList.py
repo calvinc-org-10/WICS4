@@ -4,7 +4,13 @@ import uuid
 from flask import session, request, Response as HttpResponse
 from flask_login import login_required
 
-from calvincTools.utils import checkTemplate_and_render
+from app import huey
+
+from calvincTools.utils import (
+    checkTemplate_and_render,
+    ExcelWorkbook_fileext,
+    )
+from calvincTools.models import cParameters
 
 from models import async_comm
 
@@ -35,15 +41,22 @@ def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid):
         statetext = 'Uploading Spreadsheet',
         )
 
-    SAPFile = req.FILES['SAPFile']
-    svdir = getcParm(req, 'SAP-FILELOC')
+    SAPFile = request.files.get('SAPFile')
+    if SAPFile is None:
+        acomm = async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'fatalerr',
+            statetext = 'No file uploaded. Please upload an Excel spreadsheet and try again.',
+            result = 'FAIL - no file uploaded',
+            )
+        return
+    svdir = cParameters.get_parameter('SAP-FILELOC')
     fName = svdir+"tmpMatlList"+str(uuid.uuid4())+ExcelWorkbook_fileext
-    with open(fName, "wb") as destination:
-        for chunk in SAPFile.chunks():
-            destination.write(chunk)
+    SAPFile.save(fName)
 
     return fName
 
+@huey.task()
 def proc_MatlListSAPSprsheet_01ReadSpreadsheet(dbToUse, reqid, fName):
     acomm = async_comm.set_async_comm_state(
         reqid,
@@ -382,7 +395,12 @@ def fnUpdateMatlListfromSAP():
 
         retinfo = HttpResponse()
         if client_phase=='init-upl':
-            # start django_q broker
+            # start Huey consumer (or at least make sure it's running) and save the pid in a cookie so we can kill it later in the cleanup proc.  When we can start Huey programmatically, this is where we start it and get the pid.
+            # reqid = subprocess.Popen(
+                # ['python', f'huey_consumer.py', 'app.huey -w 4']
+            # ).pid
+            # retinfo.set_cookie('reqid',str(reqid))
+
             reqid = uuid.uuid4()
             while async_comm.async_comm_exists(reqid):
                 reqid = uuid.uuid4()
@@ -391,7 +409,7 @@ def fnUpdateMatlListfromSAP():
             UpdateExistFldList = request.form.getlist('UpIfCh')
             proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList)
 
-            UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(req, reqid)
+            UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid)
             async_task(proc_MatlListSAPSprsheet_01ReadSpreadsheet, dbToUse, reqid, UMLSSName, hook=done_MatlListSAPSprsheet_01ReadSpreadsheet)
 
             acomm = async_comm.objects.using(dbToUse).values().get(pk=reqid)    # something's very wrong if this doesn't exist

@@ -1,6 +1,8 @@
 from flask import Flask, app, render_template, request, redirect, url_for, session
 from flask_migrate import Migrate
 
+from huey import SqliteHuey
+
 from calvincTools.config import calvincTools_config
 from calvincTools import calvincTools_init
 
@@ -79,6 +81,8 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
 
 
 app = create_app()
+huey = SqliteHuey(filename='huey.db')  # You can specify the filename for the SQLite database used by Huey
+
 if __name__ == '__main__':
     app.run(debug=True)
 
