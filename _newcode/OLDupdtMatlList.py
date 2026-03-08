@@ -1,8 +1,10 @@
-import uuid
+import uuid, os, re as regex
 # import json
 
 from flask import session, request, Response as HttpResponse
 from flask_login import login_required
+
+from openpyxl import load_workbook
 
 from app import huey
 
@@ -10,9 +12,15 @@ from calvincTools.utils import (
     checkTemplate_and_render,
     ExcelWorkbook_fileext,
     )
-from calvincTools.models import cParameters
 
-from models import async_comm
+from calvincTools.models import (cParameters, )
+from database import (app_db,)
+from models import (
+    tmpMaterialListUpdate, SAPPlants_org,
+    async_comm
+    )
+    
+
 
 
 ####################################################################################
@@ -51,7 +59,7 @@ def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid):
             )
         return
     svdir = cParameters.get_parameter('SAP-FILELOC')
-    fName = svdir+"tmpMatlList"+str(uuid.uuid4())+ExcelWorkbook_fileext
+    fName = svdir+"tmpMatlList"+str(reqid)+ExcelWorkbook_fileext
     SAPFile.save(fName)
 
     return fName
@@ -64,12 +72,14 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(dbToUse, reqid, fName):
         statetext = 'Reading Spreadsheet',
         )
 
-    tmpMaterialListUpdate.objects.using(dbToUse).all().delete()
-
+    app_db.session.query(tmpMaterialListUpdate).delete(synchronize_session=False)
+    app_db.session.commit()
+    
     wb = load_workbook(filename=fName, read_only=True)
     ws = wb.active
+    assert ws is not None, "Error: Spreadsheet appears to be blank. Please fix this and try again."
     SAPcolmnNames = ws[1]
-    SAPcol = {'Plant':None,'Material': None}
+    SAPcol:dict[str, int|None] = {'Plant':None,'Material': None}
     SAP_SSName_TableName_map = {
             'Material': 'Material',
             'Material description': 'Description',
@@ -84,11 +94,13 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(dbToUse, reqid, fName):
             'Currency':'Currency',
             }
     for col in SAPcolmnNames:
+        assert col.value is not None, f"Error: Blank column header found in spreadsheet at column {col.column}. Please fix this and try again."
+        assert col.column is not None, f"Error: Column with blank header has no column number. This shouldn't happen. Please check the spreadsheet and try again."
         if col.value in SAP_SSName_TableName_map:
-            SAPcol[SAP_SSName_TableName_map[col.value]] = col.column - 1
+            colval = str(col.value)
+            SAPcol[SAP_SSName_TableName_map[colval]] = col.column - 1
     if (SAPcol['Material'] == None or SAPcol['Plant'] == None):
         async_comm.set_async_comm_state(
-            dbToUse,
             reqid,
             statecode = 'fatalerr',
             statetext = 'SAP Spreadsheet has bad header row. Plant and/or Material is missing.  See Calvin to fix this.',
@@ -101,11 +113,11 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(dbToUse, reqid, fName):
 
     numrows = ws.max_row
     nRows = 0
+    reportEveryNRows = min(100, max(1, numrows//10))
     for row in ws.iter_rows(min_row=2, values_only=True):
         nRows += 1
-        if nRows % 100 == 0:
+        if nRows % reportEveryNRows == 0:
             async_comm.set_async_comm_state(
-                dbToUse,
                 reqid,
                 statecode = 'rdng-sprsht',
                 statetext = f'Reading Spreadsheet ... record {nRows} of {numrows}<br><progress max="{numrows}" value="{nRows}"></progress>',
@@ -116,30 +128,35 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(dbToUse, reqid, fName):
         validTmpRec = False
         ## create a blank tmpMaterialListUpdate record,
         newrec = tmpMaterialListUpdate()
-        if regex.match(".*[\n\t\xA0].*",MatNum):
+        if regex.match(".*[\n\t\xA0].*",str(MatNum)):
             validTmpRec = True
             ## refuse to work with special chars embedded in the MatNum
             newrec.recStatus = 'err-MatlNum'
             newrec.errmsg = f'error: {MatNum!a} is an unusable part number. It contains invalid characters and cannot be added to WICS'
         elif len(str(MatNum)):
             validTmpRec = True
-            _org = SAPPlants_org.objects.using(dbToUse).filter(SAPPlant=row[SAPcol['Plant']])[0].org        #TODO: handle empty table
-            newrec.org = _org
+            plant_col = SAPcol['Plant']
+            if plant_col is not None:
+                org_row = SAPPlants_org.query.filter_by(SAPPlant=row[plant_col]).first()
+                if org_row is not None:
+                    newrec.org = org_row.org
         # endif invalid Material
         if validTmpRec:
             ## populate by looping through SAPcol,
             ## then save
             for dbColName, ssColNum in SAPcol.items():
+                assert ssColNum is not None, f"Error: Column {dbColName} has no column number. This shouldn't happen. Please check the spreadsheet and try again."
                 setattr(newrec,dbColName,row[ssColNum])
-            newrec.save(using=dbToUse)
+            
+            app_db.session.add(newrec)
+            app_db.session.commit()
     # endfor
 
     wb.close()
     os.remove(fName)
-def done_MatlListSAPSprsheet_01ReadSpreadsheet(t):
-    reqid = t.args[1]
-    statecode = async_comm.objects.using(dbToUse).get(pk=reqid).statecode
-    #DOITNOW!!! handle not t.success, t.result
+
+    # report done and move to next step
+    statecode = getattr(async_comm.get_async_comm_state(reqid), 'statecode', 'fatalerr')    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to fatalerr if we can't get the statecode
     if statecode != 'fatalerr':
         async_comm.set_async_comm_state(
             reqid,
@@ -147,6 +164,7 @@ def done_MatlListSAPSprsheet_01ReadSpreadsheet(t):
             statetext = f'Finished Reading Spreadsheet',
             )
         proc_MatlListSAPSprsheet_02_identifyexistingMaterial(dbToUse, reqid)
+# proc_MatlListSAPSprsheet_01ReadSpreadsheet
 
 def proc_MatlListSAPSprsheet_02_identifyexistingMaterial(dbToUse, reqid):
     async_comm.set_async_comm_state(
