@@ -464,7 +464,7 @@ def fnUpdateMatlListfromSAP():
                 'AddedMatls':AddedMatlsList,
                 'RemvdMatls':RemvdMatlsList,
                 }
-            templt = 'frmUpdateMatlListfromSAP_done.html'
+            templt = 'Material/frmUpdateMatlListfromSAP_done.html'
             return checkTemplate_and_render(templt, cntext)
         elif client_phase=='cleanup-after-failure':
             pass
@@ -483,7 +483,7 @@ def fnUpdateMatlListfromSAP():
         cntext = {
             'reqid': -1,
             }
-        templt = 'frmUpdateMatlListfromSAP_phase0.html'
+        templt = 'Material/frmUpdateMatlListfromSAP_phase0.html'
         return checkTemplate_and_render(templt, cntext)
     #endif req.method = 'POST'
 # fnunUpdateMatlListfromSAP
