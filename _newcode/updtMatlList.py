@@ -8,7 +8,7 @@ from sqlalchemy.sql import select
 
 from openpyxl import load_workbook
 
-from app import huey
+from app_huey import huey
 
 from calvincTools.utils import (
     checkTemplate_and_render,
@@ -411,7 +411,7 @@ def proc_MatlListSAPSprsheet_99_Cleanup(reqid):
     app_db.session.commit()
 
 @login_required
-def NEWfnUpdateMatlListfromSAP():
+def fnUpdateMatlListfromSAP():
 
     client_phase = request.form.get('phase', None)
     reqid = request.cookies.get('reqid', None)
@@ -489,7 +489,7 @@ def NEWfnUpdateMatlListfromSAP():
 # fnunUpdateMatlListfromSAP
 
 
-def fnUpdateMatlListfromSAP():
+def PLACEHOLDER_fnUpdateMatlListfromSAP():
     # This is a placeholder for the function that will update the material list from SAP.
     # The actual implementation will depend on how you plan to connect to SAP and retrieve the data.
     # For now, it simply returns a message indicating that the function was called. You can replace this with the actual logic to update the material list from SAP.
