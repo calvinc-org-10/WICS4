@@ -441,7 +441,11 @@ def fnUpdateMatlListfromSAP():
             UpdateExistFldList = request.form.getlist('UpIfCh')
             proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList)
 
-            UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid)
+            if request.form.get('use-local-copy', False) == 'use-local-copy':
+                UMLSSName = request.files.get('SAPFile').filename # type: ignore
+            else:
+                UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid)
+            #endif use local copy
             proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, UMLSSName)
 
             acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist

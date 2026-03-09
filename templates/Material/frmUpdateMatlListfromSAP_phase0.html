@@ -1,6 +1,4 @@
-{% extends "WICS_common.html" %}
-{% load widget_tweaks %}
-{% load static %}
+{% extends "cTools_common.html" %}
 
 {% block tTitle %}Update Material List from SAP Spreadsheet{% endblock %}
 {% block formName %}Update Material List from SAP MM60 or ZMSQV001 Spreadsheet{% endblock %}
@@ -25,6 +23,10 @@
                     accept=".xlsx,application/vnd.ms-excel">
                 </input>
                 </p>
+                <p>
+                    <input id="use-local-copy" type="checkbox" name="use-local-copy" value="use-local-copy" />
+                    <label for="use-local-copy">Use local copy of spreadsheet (for local dev/testing - <b>won't copy to server!</b>)</label>
+                </p>
                 Phs: <input id="phase" name="phase" type="text" value='init-upl' readonly></input>
             </div>
             <div class="col">
@@ -45,14 +47,14 @@
         <div class="row mx-auto max-width=100%">
             <div class="col-6">
                 <button id="next_btn" type="button" onclick="PollBackend_fromInput();">
-                    <img src="{% static 'upload-outbox-line-icon.svg' %}" width="20" height="20"></img>
+                    <img src="{{ url_for('ctools.static', filename='svg/upload-outbox-line-icon.svg') }}" width="20" height="20"></img>
                     Upload
                 </button>
             </div>
             <div class="col-4"></div>
             <div class="col">
                 <button id="close_btn" type="button">
-                    <img src="{% static 'stop-road-sign-icon.svg' %}" width="20" height="20"></img>
+                    <img src="{{ url_for('ctools.static', filename='svg/stop-road-sign-icon.svg') }}" width="20" height="20"></img>
                     Close Form
                 </button>
             </div>
