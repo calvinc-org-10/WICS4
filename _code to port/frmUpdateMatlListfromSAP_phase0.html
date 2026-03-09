@@ -226,3 +226,20 @@
 </script>
 
 {% endblock %}
+
+
+////////////////////////////////
+
+$.ajax({
+    url: '/fnupdate',
+    method: 'POST',
+    success: function(response) {
+        // Option A: Simply reload the current page to reflect changes
+        window.location.reload(); 
+        
+        // Option B: Go back to the previous page in history
+        // window.history.back();
+    }
+});
+This is post-delete cookie code
+reloading page to complete cookie deletion
