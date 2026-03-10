@@ -58,6 +58,14 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
         cTools_models=cTools_models
         ).cTools_tables
 
+    from database import huey_engine, set_SQLite_WAL_mode
+    set_SQLite_WAL_mode()  # set the SQLite journal mode to WAL (Write-Ahead Logging) to allow for better concurrency between the main application and the background tasks when they are both accessing the same SQLite database. This is necessary because SQLite has limited support for concurrent writes, and using WAL mode can help mitigate some of those issues by allowing multiple readers and a single writer to access the database at the same time without blocking each other as much as in the default journal mode.
+    from models import HueyBase
+    HueyBase.metadata.create_all(huey_engine)
+
+    ##################################################
+    ##################################################
+    
     # define routes
     @flskapp.route('/')       # I don't want / to be valid
     def app_homepage():
@@ -74,6 +82,9 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
     def about():
         """About page route."""
         return render_template('about.html')
+
+    from _newcode.updtMatlList import progress_UpdML
+    flskapp.add_url_rule('/progress/UpdMatlLst/<reqid>', view_func=progress_UpdML)
 
     return flskapp
 

@@ -64,184 +64,132 @@
 
 <script>
 
-    var intervalID;
-    const POLLING_INTERVAL = 2000;
+/* ---------- DOM CACHE ---------- */
+
+const uploadStatus = document.getElementById("Upload-Status");
+const retStatecodeEl = document.getElementById("retStatecode");
+const fatalErrMsg = document.getElementById("fatalErrMsg");
+
+const waitSpinner = document.getElementById("wait_spinner");
+
+const phaseInput = document.getElementById("phase");
+
+const sapFile = document.getElementById("SAPFile");
+const nextBtn = document.getElementById("next_btn");
+const closeBtn = document.getElementById("close_btn");
+
+const form = document.getElementById("getUpdSprsheet");
+
+/* ---------- SIMPLE HELPERS ---------- */
+
+const startWaitSpinner = () => waitSpinner.style.display = "block";
+const stopWaitSpinner = () => waitSpinner.style.display = "none";
 
 
-    document.getElementById("close_btn").addEventListener("click",
-        function(){
-            window.close();
-        });
 
-    // add listeners to the Update If Changed choices to hilight them if clicked
-    const UpIfChChoices = document.querySelectorAll(".UpIfCh")
-    UpIfChChoices.forEach(
-        function (UpIfChChoiceBox) {
-            UpIfChChoiceBox.addEventListener("change",
-                function(event) {
-                    let enclosingDiv = event.target.parentElement;
-                    let isChecked = event.target.checked;
-                    if (enclosingDiv) {
-                        enclosingDiv.style.color = isChecked ? "green" : "black";
-                        enclosingDiv.style.setProperty("font-weight", isChecked ? "bold" : "normal");
-                      }
-                }
-          );
+closeBtn.addEventListener("click", () => window.close());
+
+// add listeners to the Update If Changed choices to hilight them if clicked
+const UpIfChChoices = document.querySelectorAll(".UpIfCh")
+UpIfChChoices.forEach(
+    function (UpIfChChoiceBox) {
+        UpIfChChoiceBox.addEventListener("change",
+            function(event) {
+                const box = event.target;
+                const container = box.closest("div");
+
+                container.style.color = box.checked ? "green" : "black";
+                container.style.fontWeight = box.checked ? "bold" : "normal";
+            }
+        );
+    }
+)
+
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+
+let evtSource;
+
+async function startUpload() {
+
+    startSpinner();
+
+    const formdata = new FormData(form);
+
+    const res = await fetch("/start-upload", {
+        method: "POST",
+        body: formdata
+    });
+
+    const data = await res.json();
+
+    listenForUpdates(data.reqid);
+}
+
+
+function listenForUpdates(job_id) {
+
+    evtSource = new EventSource(`/progress/${job_id}`);
+
+    evtSource.onmessage = (event) => {
+
+        const data = JSON.parse(event.data);
+
+        uploadStatus.innerHTML = data.statetext;
+
+        if (data.statecode === "done") {
+
+            evtSource.close();
+            stopSpinner();
+
+            window.location = `/results/${job_id}`;
         }
-    )
+    };
+}
 
-    function start_wait_spinner() { document.getElementById("wait_spinner").style.display = "block"; };
-    function stop_wait_spinner() { document.getElementById("wait_spinner").style.display = "none"; };
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
 
-    function SetRetData(data) {
-        document.getElementById("Upload-Status").innerHTML = data.statetext;
-        document.getElementById("retStatecode").innerHTML = data.statecode;
-        };
+<script>
+const form = document.getElementById("uploadForm");
+const status = document.getElementById("status");
+const spinner = document.getElementById("spinner");
 
-    function PollBackend_fromInput() {
-        PollBackend($("#phase").val())
-    }
-    function PollBackend(phase){
+form.addEventListener("submit", async e => {
 
-        // var phase = $("#phase").val() - phase gets passed in now - leave this code JIC
-        $("#phase").val(phase)
-        var retStatecode;
-        const fform = document.getElementById("getUpdSprsheet");
-        const formdata = new FormData(fform);
+    e.preventDefault();
 
-        if (phase == 'init-upl') {
-            document.getElementById("Upload-Status").innerHTML = "";
-            document.getElementById("fatalErrMsg").innerHTML = "";
-            start_wait_spinner()
+    spinner.style.display = "block";
 
-            $.ajax({
-                method: 'POST', 
-                data: formdata, 
-                processData: false, 
-                contentType: false, 
-                dataType: "json",
-                success: SetRetData,
-                });
-            $("#phase").val('waiting')
-            intervalID = setInterval(PollBackend_fromInput,POLLING_INTERVAL);
-            
-            // disable buttons
-            document.getElementById("SAPFile").disabled = true
-            document.getElementById("next_btn").disabled = true
-        } else if (phase == 'waiting') {
-            $.ajax({
-                method: 'POST', 
-                data: formdata, 
-                processData: false, 
-                contentType: false, 
-                dataType: "json",
-                success: SetRetData,
-                });
-        } else if (phase == 'need-ident-exist-matl') {
-            start_wait_spinner()
+    const res = await fetch("/start-upload", {
+        method: "POST",
+        body: new FormData(form)
+    });
 
-            $.ajax({
-                method: 'POST', 
-                data: formdata, 
-                processData: false, 
-                contentType: false, 
-                dataType: "json",
-                success: SetRetData,
-                });
-            $("#phase").val('waiting')
-            intervalID = setInterval(PollBackend_fromInput,POLLING_INTERVAL);
-        } else if (phase == 'need-add-del') {
-            start_wait_spinner()
+    const { job_id } = await res.json();
 
-            $.ajax({
-                method: 'POST', 
-                data: formdata, 
-                processData: false, 
-                contentType: false, 
-                dataType: "json",
-                success: SetRetData,
-                });
-            $("#phase").val('waiting')
-            intervalID = setInterval(PollBackend_fromInput,POLLING_INTERVAL);
-        } else if (phase == 'wantresults') {
-            // code won't make it here; normal reuqest submitted immediately on entering this phase (see retStatecode == 'done')
-        };
+    const stream = new EventSource(`/progress/${job_id}`);
 
-        retStatecode = document.getElementById("retStatecode").innerHTML;
-        // the following retStatecodes are NOOPs:
-        // rdng-sprsht-init, starting, uploading-sprsht, rdng-sprsht, get-matl-link, add-matl, done-add-matl, del-matl, done-del-matl
-        if (retStatecode == "fatalerr") {
-            // kill intervalID = setInterval(PollBackend,1500,'waiting');
-            clearInterval(intervalID);
+    stream.onmessage = e => {
 
-            $( '#fatalErrMsg' ).text( $("#Upload-Status").text() );
-            $( '#Upload-Status' ).text( "" );
-            stop_wait_spinner();
-            
-            $("#phase").val('init-upl')
-            document.getElementById("SAPFile").disabled = false
-            document.getElementById("next_btn").disabled = false
+        const data = JSON.parse(e.data);
 
-            $( '#SAPFile' ).val(null);
-            $( '#SAPFile' ).trigger("focus");
+        status.textContent = data.statetext;
 
-            // await user action
-        } else if (retStatecode == "done-rdng-sprsht") {
-            /** now that the backend runs in acceptable time, don't do this manually
-            clearInterval(intervalID);  // stop polling
-            stop_wait_spinner();
-            
-            $("#phase").val('need-ident-exist-matl')
-            
-            $( '#SAPFile' ).prop("disabled", true);
-
-            $("#next_btn").text("Phase 1 processing (identify new/deleted matls)")
-
-            // await user action            
-            **/
-        } else if (retStatecode == "get-matl-link-done") {
-            /** now that the backend runs in acceptable time, don't do this manually
-            clearInterval(intervalID);
-            stop_wait_spinner();
-            
-            $("#phase").val('need-add-del')
-            
-            $("#next_btn").text("Phase 2 processing (do add/deletes)")
-
-            // await user action
-            **/
-        } else if (retStatecode == "done") {
-            // kill intervalID = setInterval(PollBackend,1500,'waiting');
-            clearInterval(intervalID);
-
-            // switch to results
-            $("#phase").val('wantresults');
-            // normal post, not ajax - result will replace this page
-            $("#getUpdSprsheet").trigger("submit");
-        };
-    }
-
-    document.body.onbeforeunload = function() {
-        document.getElementById("wait_spinner").style.display = "block";
+        if (data.statecode === "done") {
+            stream.close();
+            window.location = `/results/${job_id}`;
         }
 
-</script>
+        if (data.statecode === "fatalerr") {
+            stream.close();
+            spinner.style.display = "none";
+            alert(data.statetext);
+        }
+    };
 
-{% endblock %}
-
-
-////////////////////////////////
-
-$.ajax({
-    url: '/fnupdate',
-    method: 'POST',
-    success: function(response) {
-        // Option A: Simply reload the current page to reflect changes
-        window.location.reload(); 
-        
-        // Option B: Go back to the previous page in history
-        // window.history.back();
-    }
 });
-This is post-delete cookie code
-reloading page to complete cookie deletion
+</script>
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+

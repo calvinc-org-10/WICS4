@@ -1,6 +1,10 @@
-import uuid, os, re as regex, ast
+import uuid, os, re as regex, ast, json, time
 
-from flask import session, request, make_response, jsonify
+from flask import (
+    session, 
+    request, make_response, Response, 
+    jsonify, stream_with_context,
+    )
 from flask_login import login_required
 
 from sqlalchemy import text
@@ -8,7 +12,7 @@ from sqlalchemy.sql import select
 
 from openpyxl import load_workbook
 
-from app_huey import huey
+from database import huey
 
 from calvincTools.utils import (
     checkTemplate_and_render,
@@ -414,7 +418,7 @@ def proc_MatlListSAPSprsheet_99_Cleanup(reqid):
 def fnUpdateMatlListfromSAP():
 
     client_phase = request.form.get('phase', None)
-    reqid = request.cookies.get('reqid', None)
+    reqid = request.cookies.get('reqid', None)  # where's thee reqid kept?  # eventually, delete the use of cookies for this and just pass the reqid back and forth in the request body or something; using cookies was just a quick way to get it working without having to change the frontend code much, but it's not ideal since it relies on the client to keep track of the reqid correctly and send it back with each request, which could lead to issues if the client doesn't do that correctly.  Passing the reqid back and forth in the request body would be more reliable and easier to manage, but would require changes to the frontend code to include the reqid in each request.
 
     if request.method == 'POST':
         # check if the mandatory commits have been done and change the status code if so
@@ -450,7 +454,7 @@ def fnUpdateMatlListfromSAP():
 
             acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
             retinfo = make_response(jsonify(acomm))
-            retinfo.set_cookie('reqid',str(reqid))
+            # retinfo.set_cookie('reqid',str(reqid))
             return retinfo
         elif client_phase=='waiting':
             acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
@@ -475,7 +479,7 @@ def fnUpdateMatlListfromSAP():
         elif client_phase=='resultspresented':
             proc_MatlListSAPSprsheet_99_Cleanup(reqid)
             retinfo = make_response(jsonify(success=True))
-            retinfo.delete_cookie('reqid')
+            # retinfo.delete_cookie('reqid')
 
             return retinfo
         else:
@@ -492,6 +496,46 @@ def fnUpdateMatlListfromSAP():
     #endif req.method = 'POST'
 # fnunUpdateMatlListfromSAP
 
+from database import HueySession
+# @app.get("/progress/UpdMatlLst/<reqid>")
+def progress_UpdML(reqid):
+
+    def generate():
+        last_version = 0
+
+        while True:
+            # session = HueySession()
+
+            row = async_comm.get_async_comm_state(reqid)    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to None if we can't get the record
+
+            if row and row.version > last_version:
+
+                payload = json.dumps({
+                    "statecode": row.statecode,
+                    "statetext": row.statetext
+                })  #should I dump the whole record here instead of just statecode and statetext?  Maybe not a good idea if there are big text fields or something, but it would be more flexible for the frontend if it had access to all the fields without me having to predict which ones it might want.  For now, I'll just include statecode and statetext since those are the ones I know the frontend will need, and I can always add more later if needed.
+
+                yield f"data: {payload}\n\n"
+
+                last_version = row.version
+
+                if row.statecode == "done":
+                    break
+
+            # session.close()
+
+            yield ": keepalive\n\n"
+
+            time.sleep(1)
+        # endwhile (until we break on statecode == "done")
+    # generate
+
+    r = Response(stream_with_context(generate()),
+                 mimetype="text/event-stream")
+
+    r.headers["X-Accel-Buffering"] = "no"
+
+    return r
 
 def PLACEHOLDER_fnUpdateMatlListfromSAP():
     # This is a placeholder for the function that will update the material list from SAP.

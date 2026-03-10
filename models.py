@@ -7,7 +7,7 @@ from sqlalchemy import (
     BigInteger, Integer, SmallInteger, Boolean,
     Double, 
     String,
-    Date, 
+    Date, DateTime,
     ForeignKeyConstraint, Index, UniqueConstraint,
     select,
     inspect, 
@@ -443,20 +443,30 @@ class UnitsOfMeasure(Base):
 
 ##########  ASYNC COMM
 
-class async_comm(Base):
-    __tablename__ = 'WICS_async_comm'
+from database import HueySession
+
+class HueyBase(DeclarativeBase):
+    """Base class for Huey background task models, using SQLAlchemy's DeclarativeBase."""
+    pass
+class async_comm(HueyBase):
+    __tablename__ = 'async_comm'
 
     reqid: Mapped[str] = mapped_column(String(255), primary_key=True)
-    timestamp: Mapped[str|None] = mapped_column(String(30))
+    version = mapped_column(Integer, default=0)
+    timestamp: Mapped[datetime.datetime|None] = mapped_column(DateTime)
     processname: Mapped[str|None] = mapped_column(String(256))
     statecode: Mapped[str|None] = mapped_column(String(64))
     statetext: Mapped[str|None] = mapped_column(String(512))
     result: Mapped[str|None] = mapped_column(String(2048))
     extra1: Mapped[str|None] = mapped_column(String(2048))
+    
 
     @classmethod
     def get_async_comm_state(cls, reqid):
-        return cls.query.filter_by(reqid=reqid).first()
+        session = HueySession()
+        retval = session.get(cls, reqid)
+        session.close()
+        return retval
     @classmethod
     def async_comm_exists(cls, reqid):
         return cls.get_async_comm_state(reqid=reqid) is not None
@@ -471,31 +481,52 @@ class async_comm(Base):
             extra1 = None
         ):
         
-        acomm = cls.query.filter_by(reqid=reqid).first()
+        session = HueySession()
+        acomm = session.get(cls, reqid)
         
         if not acomm:
-            acomm = cls(reqid=reqid)
-        
+            acomm = cls(reqid=reqid, version=0)
+
+        # has anything really changed?
+        if all([acomm.statecode == statecode,
+            acomm.statetext == statetext,
+            acomm.result == result,
+            ]):
+            session.close()
+            return acomm        
+
+        # do the change!
         acomm.statecode = statecode
         acomm.statetext = statetext
         acomm.result = result
         acomm.extra1 = extra1
         if processname is not None: acomm.processname = processname
-        acomm.timestamp = datetime.datetime.now().__str__()
+        acomm.version += 1
+        acomm.timestamp = datetime.datetime.now()
         
-        app_db.session.add(acomm)
-        app_db.session.commit()
+        session.add(acomm)
+        session.commit()
+        session.close()
         
         return acomm
+    # set_async_comm_state
 
     @classmethod
     def delete_async_comm(cls, reqid):
-        acomm = cls.query.filter_by(reqid=reqid).first()
+        session = HueySession()
+        
+        acomm = session.get(cls, reqid)
         if acomm:
-            app_db.session.delete(acomm)
-            app_db.session.commit()
-            return True
-        return False
+            session.delete(acomm)
+            session.commit()
+            retval = True
+        else:
+            retval = False
+        #endif acomm
+        
+        session.close()
+        return retval
+    # delete_async_comm
     
 ########## 
 ########## 
