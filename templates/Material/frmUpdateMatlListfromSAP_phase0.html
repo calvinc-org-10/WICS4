@@ -13,7 +13,7 @@
 {% block boddy %}
 <hr>
 <form id="getUpdSprsheet" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
+    {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
     <div class="container">
         <div class="row">
             <div class="col">
@@ -46,7 +46,7 @@
     <div class="container">
         <div class="row mx-auto max-width=100%">
             <div class="col-6">
-                <button id="next_btn" type="button" onclick="PollBackend_fromInput();">
+                <button id="next_btn" type="submit" >
                     <img src="{{ url_for('ctools.static', filename='svg/upload-outbox-line-icon.svg') }}" width="20" height="20"></img>
                     Upload
                 </button>
@@ -80,12 +80,14 @@ const closeBtn = document.getElementById("close_btn");
 
 const form = document.getElementById("getUpdSprsheet");
 
+
 /* ---------- SIMPLE HELPERS ---------- */
 
 const startWaitSpinner = () => waitSpinner.style.display = "block";
 const stopWaitSpinner = () => waitSpinner.style.display = "none";
 
 
+/* ---------- DOM EVENT LISTENERS ---------- */
 
 closeBtn.addEventListener("click", () => window.close());
 
@@ -105,61 +107,14 @@ UpIfChChoices.forEach(
     }
 )
 
-/////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////
 
-let evtSource;
-
-async function startUpload() {
-
-    startSpinner();
-
-    const formdata = new FormData(form);
-
-    const res = await fetch("/start-upload", {
-        method: "POST",
-        body: formdata
-    });
-
-    const data = await res.json();
-
-    listenForUpdates(data.reqid);
-}
-
-
-function listenForUpdates(job_id) {
-
-    evtSource = new EventSource(`/progress/${job_id}`);
-
-    evtSource.onmessage = (event) => {
-
-        const data = JSON.parse(event.data);
-
-        uploadStatus.innerHTML = data.statetext;
-
-        if (data.statecode === "done") {
-
-            evtSource.close();
-            stopSpinner();
-
-            window.location = `/results/${job_id}`;
-        }
-    };
-}
-
-/////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////
-
-<script>
-const form = document.getElementById("uploadForm");
-const status = document.getElementById("status");
-const spinner = document.getElementById("spinner");
+/* ---------- async (SSE) listeners ---------- */
 
 form.addEventListener("submit", async e => {
 
     e.preventDefault();
 
-    spinner.style.display = "block";
+    startWaitSpinner();
 
     const res = await fetch("/start-upload", {
         method: "POST",
@@ -168,7 +123,7 @@ form.addEventListener("submit", async e => {
 
     const { job_id } = await res.json();
 
-    const stream = new EventSource(`/progress/${job_id}`);
+    const stream = new EventSource(`/SSE/UpdMatlLst/${job_id}`);
 
     stream.onmessage = e => {
 
@@ -183,13 +138,11 @@ form.addEventListener("submit", async e => {
 
         if (data.statecode === "fatalerr") {
             stream.close();
-            spinner.style.display = "none";
+            stopWaitSpinner();
             alert(data.statetext);
         }
     };
 
 });
 </script>
-/////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////
-
+{% endblock %}

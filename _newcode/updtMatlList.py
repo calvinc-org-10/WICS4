@@ -414,7 +414,9 @@ def proc_MatlListSAPSprsheet_99_Cleanup(reqid):
     app_db.session.query(tmpMaterialListUpdate).delete(synchronize_session=False)
     app_db.session.commit()
 
+# from app import csrf
 @login_required
+# @csrf.exempt
 def fnUpdateMatlListfromSAP():
 
     client_phase = request.form.get('phase', None)
@@ -492,12 +494,12 @@ def fnUpdateMatlListfromSAP():
             'reqid': -1,
             }
         templt = 'Material/frmUpdateMatlListfromSAP_phase0.html'
-        return checkTemplate_and_render(templt, cntext)
+        return checkTemplate_and_render(templt, **cntext)
     #endif req.method = 'POST'
 # fnunUpdateMatlListfromSAP
 
 from database import HueySession
-# @app.get("/progress/UpdMatlLst/<reqid>")
+# @app.get("/SSE/UpdMatlLst/<reqid>")
 def progress_UpdML(reqid):
 
     def generate():

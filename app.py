@@ -83,8 +83,10 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
         """About page route."""
         return render_template('about.html')
 
+    from _newcode.streamtest import test_stream
+    flskapp.add_url_rule('/SSE/test-stream', view_func=test_stream)
     from _newcode.updtMatlList import progress_UpdML
-    flskapp.add_url_rule('/progress/UpdMatlLst/<reqid>', view_func=progress_UpdML)
+    flskapp.add_url_rule('/SSE/UpdMatlLst/<reqid>', view_func=progress_UpdML)
 
     return flskapp
 

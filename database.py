@@ -12,7 +12,7 @@ huey = SqliteHuey(filename='huey.db')  # You can specify the filename for the SQ
 
 #HUEY PROCESS STATUS DATABASE
 huey_engine = create_engine(
-    "sqlite:///huey_progress.db",
+    "sqlite:///huey.db",
     connect_args={"check_same_thread": False}
 )
 HueySession = sessionmaker(bind=huey_engine)
