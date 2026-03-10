@@ -497,7 +497,23 @@ def fnUpdateMatlListfromSAP():
 # fnunUpdateMatlListfromSAP
 
 def init_UpldMatlList():
-    ...
+    reqid = uuid.uuid4()
+    while async_comm.async_comm_exists(reqid):
+        reqid = uuid.uuid4()
+
+    UpdateExistFldList = request.form.getlist('UpIfCh')
+    proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList)
+
+    if request.form.get('use-local-copy', False) == 'use-local-copy':
+        UMLSSName = request.files.get('SAPFile').filename # type: ignore
+    else:
+        UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid)
+    #endif use local copy
+    proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, UMLSSName)
+
+    acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
+    retinfo = make_response(jsonify(acomm))
+    return retinfo
 # init_UpldMatlList
 
 from database import HueySession
