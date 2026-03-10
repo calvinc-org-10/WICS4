@@ -116,29 +116,37 @@ form.addEventListener("submit", async e => {
 
     startWaitSpinner();
 
-    const res = await fetch("/start-upload", {
+    const res = await fetch("url_for('init_UpldMatlList')", {
         method: "POST",
         body: new FormData(form)
     });
 
     const { job_id } = await res.json();
 
-    const stream = new EventSource(`/SSE/UpdMatlLst/${job_id}`);
+    const eSource_tmpurl = "{{ url_for('progress_UpdML', reqid='XXJOBIDXX') }}"; // this is a template string with a placeholder for the job_id that will be replaced in the next line
+    const eSource_url = eSource_tmpurl.replace("XXJOBIDXX", job_id);
+
+    const stream = new EventSource(eSource_url);
 
     stream.onmessage = e => {
 
         const data = JSON.parse(e.data);
 
-        status.textContent = data.statetext;
+        uploadStatus.textContent = data.statetext;
+        retStatecodeEl.textContent = data.statecode;
+
 
         if (data.statecode === "done") {
             stream.close();
-            window.location = `/results/${job_id}`;
+            window.location = `/results/${job_id}`; //FIXMEFIXMEFIXME!!
         }
 
         if (data.statecode === "fatalerr") {
             stream.close();
             stopWaitSpinner();
+            uploadStatus.textContent = "";
+            retStatecodeEl.textContent = data.statecode;
+            fatalErrMsg.textContent = data.statetext;
             alert(data.statetext);
         }
     };

@@ -9,6 +9,8 @@ from calvincTools import calvincTools_init
 import app_secrets
 import config
 
+from define_routes import define_routes  # Import the function to define routes
+
 def create_app(config_name=app_secrets.config_to_use):  # type: ignore
     flskapp = Flask(__name__, static_folder='assets', template_folder='templates')
     flskapp.config.from_object(config.config[config_name])
@@ -39,8 +41,6 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
     # so if the table names in your database are the same as the default (or you're OK with calvincTools creating them), 
     # you don't have to specify them.
     
-    # sorry, there's no way of changing the field names in the cTools tables. Too much of the calvincTools code relies on those field names
-    
     # These settings should be made before callvinc calvincTools_init()
     
     # Initialize extensions
@@ -58,6 +58,7 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
         cTools_models=cTools_models
         ).cTools_tables
 
+    # initialize Huey
     from database import huey_engine, set_SQLite_WAL_mode
     set_SQLite_WAL_mode()  # set the SQLite journal mode to WAL (Write-Ahead Logging) to allow for better concurrency between the main application and the background tasks when they are both accessing the same SQLite database. This is necessary because SQLite has limited support for concurrent writes, and using WAL mode can help mitigate some of those issues by allowing multiple readers and a single writer to access the database at the same time without blocking each other as much as in the default journal mode.
     from models import HueyBase
@@ -67,27 +68,8 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
     ##################################################
     
     # define routes
-    @flskapp.route('/')       # I don't want / to be valid
-    def app_homepage():
-        """Home page route."""
-        return render_template('errors/404.html'), 404
-
-    @flskapp.route(app_secrets.startup_URL)
-    def startup():
-        """Startup page route."""
-        return redirect(url_for('auth.login'))  # Redirect to the login page
-
-    # quite optional    
-    @flskapp.route('/about')
-    def about():
-        """About page route."""
-        return render_template('about.html')
-
-    from _newcode.streamtest import test_stream
-    flskapp.add_url_rule('/SSE/test-stream', view_func=test_stream)
-    from _newcode.updtMatlList import progress_UpdML
-    flskapp.add_url_rule('/SSE/UpdMatlLst/<reqid>', view_func=progress_UpdML)
-
+    define_routes(flskapp)  # Call the function to define routes
+    
     return flskapp
 
 
