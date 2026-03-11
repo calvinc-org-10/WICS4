@@ -12,7 +12,7 @@ from sqlalchemy.sql import select
 
 from openpyxl import load_workbook
 
-from database import huey
+from async_tasks import huey
 
 from calvincTools.utils import (
     checkTemplate_and_render,
@@ -516,6 +516,33 @@ def init_UpldMatlList():
     # return retinfo
     return {"job_id": reqid}
 # init_UpldMatlList
+
+# @app.get("/SSE/ENDUpdMatlLst/<reqid>")
+def closeup_UpldMatlList(reqid):
+    ...
+        # elif client_phase=='wantresults':
+        #     stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus.startswith('err'))
+        #     ImpErrList = app_db.session.execute(stmt).mappings().all()
+        #     stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus=='ADD')
+        #     AddedMatlsList = app_db.session.execute(stmt).mappings().all()
+        #     stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus.startswith('DEL'))
+        #     RemvdMatlsList = app_db.session.execute(stmt).mappings().all()
+        #     cntext = {
+        #         'ImpErrList':ImpErrList,
+        #         'AddedMatls':AddedMatlsList,
+        #         'RemvdMatls':RemvdMatlsList,
+        #         }
+        #     templt = 'Material/frmUpdateMatlListfromSAP_done.html'
+        #     return checkTemplate_and_render(templt, cntext)
+        # elif client_phase=='cleanup-after-failure':
+        #     pass
+        # elif client_phase=='resultspresented':
+        #     proc_MatlListSAPSprsheet_99_Cleanup(reqid)
+        #     retinfo = make_response(jsonify(success=True))
+        #     # retinfo.delete_cookie('reqid')
+
+        #     return retinfo
+# closeup_UpldMatlList
 
 from database import HueySession
 # @app.get("/SSE/UpdMatlLst/<reqid>")

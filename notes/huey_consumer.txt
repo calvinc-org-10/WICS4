@@ -1,1 +1,1 @@
-huey_consumer.py database.huey --verbose --no-periodic
+huey_consumer.py async_taskconsumer_imports.huey --verbose --logfile=./huey.log

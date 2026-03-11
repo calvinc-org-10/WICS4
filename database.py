@@ -1,14 +1,9 @@
 from flask_sqlalchemy import SQLAlchemy
-from huey import SqliteHuey
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 
 ## MAIN DATABASE FILE
 app_db = SQLAlchemy()
-
-
-#HUEY BACKGROUND TASKS DATABASE
-huey = SqliteHuey(filename='huey.db')  # You can specify the filename for the SQLite database used by Huey
 
 #HUEY PROCESS STATUS DATABASE
 huey_engine = create_engine(
