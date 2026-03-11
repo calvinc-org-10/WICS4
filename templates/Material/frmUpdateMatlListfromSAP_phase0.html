@@ -116,7 +116,7 @@ form.addEventListener("submit", async e => {
 
     startWaitSpinner();
 
-    const res = await fetch("url_for('init_UpldMatlList')", {
+    const res = await fetch("{{ url_for('init_UpldMatlList') }}", {
         method: "POST",
         body: new FormData(form)
     });

@@ -26,7 +26,7 @@ def define_routes(flskapp):
 
     # for Update Material List progress tracking
     from _newcode.updtMatlList import init_UpldMatlList
-    flskapp.add_url_rule('/SSE/InitUpdML/<reqid>', view_func=init_UpldMatlList, methods=['POST'])
+    flskapp.add_url_rule('/SSE/InitUpdML', view_func=init_UpldMatlList, methods=['POST'])
     from _newcode.updtMatlList import progress_UpdML
     flskapp.add_url_rule('/SSE/UpdMatlLst/<reqid>', view_func=progress_UpdML)
 

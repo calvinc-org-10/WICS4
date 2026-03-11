@@ -497,9 +497,9 @@ def fnUpdateMatlListfromSAP():
 # fnunUpdateMatlListfromSAP
 
 def init_UpldMatlList():
-    reqid = uuid.uuid4()
+    reqid = str(uuid.uuid4())
     while async_comm.async_comm_exists(reqid):
-        reqid = uuid.uuid4()
+        reqid = str(uuid.uuid4())
 
     UpdateExistFldList = request.form.getlist('UpIfCh')
     proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList)
@@ -512,8 +512,9 @@ def init_UpldMatlList():
     proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, UMLSSName)
 
     acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
-    retinfo = make_response(jsonify(acomm))
-    return retinfo
+    # retinfo = make_response(jsonify(reqid))
+    # return retinfo
+    return {"job_id": reqid}
 # init_UpldMatlList
 
 from database import HueySession
