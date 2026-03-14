@@ -24,10 +24,14 @@
                 </input>
                 </p>
                 <p>
-                    <input id="use-local-copy" type="checkbox" name="use-local-copy" value="use-local-copy" />
-                    <label for="use-local-copy">Use local copy of spreadsheet (for local dev/testing - <b>won't copy to server!</b>)</label>
+                    <label for="rmvMissingMaterial">Remove Material not in Sprsht?</label>
+                    <input id="rmvMissingMaterial" type="checkbox" name="rmvMissingMaterial" value="remove-missing-material" />
                 </p>
-                Phs: <input id="phase" name="phase" type="text" value='init-upl' readonly></input>
+                <p>
+                    <label for="use-local-copy">Use local copy of spreadsheet (for local dev/testing - <b>won't copy to server!</b>)</label>
+                    <input id="use-local-copy" type="checkbox" name="use-local-copy" value="use-local-copy" />
+                </p>
+                {# Phs: <input id="phase" name="phase" type="text" value='init-upl' readonly></input> #}
             </div>
             <div class="col">
                 <b><u>Update Existing Records if Changed:</u></b>
@@ -46,7 +50,7 @@
     <div class="container">
         <div class="row mx-auto max-width=100%">
             <div class="col-6">
-                <button id="next_btn" type="submit" >
+                <button id="next_btn" type="submit" disabled>
                     <img src="{{ url_for('ctools.static', filename='svg/upload-outbox-line-icon.svg') }}" width="20" height="20"></img>
                     Upload
                 </button>
@@ -72,7 +76,7 @@ const fatalErrMsg = document.getElementById("fatalErrMsg");
 
 const waitSpinner = document.getElementById("wait_spinner");
 
-const phaseInput = document.getElementById("phase");
+{# const phaseInput = document.getElementById("phase"); #}
 
 const sapFile = document.getElementById("SAPFile");
 const nextBtn = document.getElementById("next_btn");
@@ -90,6 +94,11 @@ const stopWaitSpinner = () => waitSpinner.style.display = "none";
 /* ---------- DOM EVENT LISTENERS ---------- */
 
 closeBtn.addEventListener("click", () => window.close());
+
+// disable nextBtn until sapFile given
+sapFile.addEventListener('change', (event) => {
+    nextBtn.disabled = (event.currentTarget.value.length < 1);
+});
 
 // add listeners to the Update If Changed choices to hilight them if clicked
 const UpIfChChoices = document.querySelectorAll(".UpIfCh")

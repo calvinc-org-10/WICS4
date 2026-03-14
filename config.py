@@ -38,7 +38,7 @@ class DevelopmentConfig(Config):
         # f'sqlite:///{app_secrets.cMenu_dbPath}'
         # 'sqlite:///dev_database.db'
     SQLALCHEMY_ENGINE_OPTIONS = getattr(app_secrets, 'SQLALCHEMY_ENGINE_OPTIONS', {})
-    SQLALCHEMY_ECHO = True
+    # SQLALCHEMY_ECHO = True
 
 
 class ProductionConfig(Config):

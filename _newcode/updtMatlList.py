@@ -33,7 +33,7 @@ from models import (
 
 ##### the suite of procs to support fnUpdateMatlListfromSAP
 
-def proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList):
+def proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList, rmvMissingMaterial=False):
     # these first calls should create the async_comm record with pk=reqid.  All subsequent calls will update that same record until we delete it in the cleanup proc at the end.
     acomm = async_comm.set_async_comm_state(
         reqid,
@@ -45,8 +45,13 @@ def proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList):
         statecode = 'UpdateExistFldList',
         statetext = f'{UpdateExistFldList}',
         )
+    async_comm.set_async_comm_state(
+        f'{reqid}-RmvMissingMatl',
+        statecode = 'RmvMissingMatl',
+        statetext = f'{rmvMissingMaterial}',
+        )
 
-def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid):
+def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy=False):
     acomm = async_comm.set_async_comm_state(
         reqid,
         statecode = 'uploading-sprsht',
@@ -62,7 +67,7 @@ def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid):
             result = 'FAIL - no file uploaded',
             )
         return
-    svdir = cParameters.get_parameter('SAP-FILELOC')
+    svdir = cParameters.get_parameter('SAP-FILELOC') if not uselocalCopy else ''
     fName = svdir+"tmpMatlList"+str(reqid)+ExcelWorkbook_fileext
     SAPFile.save(fName)
 
@@ -76,6 +81,15 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
         statetext = 'Reading Spreadsheet',
         )
 
+    if len(fName)<1 or not os.path.exists(fName):
+        acomm = async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'fatalerr',
+            statetext = f'Spreadsheet file {fName} not found. Please try again.',
+            result = 'FAIL - file not found',
+            )
+        return
+    
     app_db.session.query(tmpMaterialListUpdate).delete(synchronize_session=False)
     app_db.session.commit()
     
@@ -289,20 +303,34 @@ def proc_MatlListSAPSprsheet_04_Remove(reqid):
     ## if MustKeepMatlsDelCond: MustKeepMatlsDelCond += ' AND '
     ## MustKeepMatlsDelCond += 'id IN (SELECT DISTINCT delMaterialLink FROM WICS_tmpmateriallistupdate WHERE recStatus like "DEL%")'
 
-    async_comm.set_async_comm_state(
-        reqid,
-        statecode = 'del-matl',
-        statetext = f'Removing WICS Materials no longer in SAP MM60 Materials',
-        )
-    # do the Removals
-    ## DeleteMatlsDoitSQL = "DELETE FROM WICS_materiallist"
-    ## DeleteMatlsDoitSQL += f" WHERE ({MustKeepMatlsDelCond})"
-    DeleteMatlsDoitSQL = 'DELETE MATL'
-    DeleteMatlsDoitSQL += ' FROM WICS_materiallist AS MATL INNER JOIN WICS_tmpmateriallistupdate AS TMP'
-    DeleteMatlsDoitSQL += '    ON MATL.id = TMP.delMaterialLink'
-    DeleteMatlsDoitSQL += ' WHERE TMP.recStatus like "DEL%"'
-    app_db.session.execute(text(DeleteMatlsDoitSQL))
-    app_db.session.commit()
+    doRmv_str = getattr(async_comm.get_async_comm_state(f"{reqid}-RmvMissingMatl"), 'statetext', 'False')    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to '' if we can't get the statetext
+    doRmv = ast.literal_eval(doRmv_str)
+
+    if not doRmv:
+        async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'del-matl-skip',
+            statetext = f'Skipping Removal of WICS Materials no longer in SAP MM60 Materials because user chose to keep them',
+            )
+        proc_MatlListSAPSprsheet_04_Add(reqid)
+        return
+    else:
+        async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'del-matl',
+            statetext = f'Removing WICS Materials no longer in SAP MM60 Materials',
+            )
+
+        # do the Removals
+        ## DeleteMatlsDoitSQL = "DELETE FROM WICS_materiallist"
+        ## DeleteMatlsDoitSQL += f" WHERE ({MustKeepMatlsDelCond})"
+        DeleteMatlsDoitSQL = 'DELETE MATL'
+        DeleteMatlsDoitSQL += ' FROM WICS_materiallist AS MATL INNER JOIN WICS_tmpmateriallistupdate AS TMP'
+        DeleteMatlsDoitSQL += '    ON MATL.id = TMP.delMaterialLink'
+        DeleteMatlsDoitSQL += ' WHERE TMP.recStatus like "DEL%"'
+        app_db.session.execute(text(DeleteMatlsDoitSQL))
+        app_db.session.commit()
+    # endif doRmv
 
     # report done and move to next step    
     mandatorytaskdonekey = f'MatlX{reqid}'
@@ -319,7 +347,7 @@ def proc_MatlListSAPSprsheet_04_Remove(reqid):
     async_comm.set_async_comm_state(
         reqid,
         statecode = 'done-del-matl',
-        statetext = f'Finished Removing WICS Materials no longer in SAP MM60 Materials',
+        statetext = 'Finished Removing' if doRmv else 'Skipped Removal of' + 'WICS Materials no longer in SAP MM60 Materials',
         )
     proc_MatlListSAPSprsheet_04_Add(reqid)
 # proc_MatlListSAPSprsheet_04_Remove
@@ -502,13 +530,11 @@ def init_UpldMatlList():
         reqid = str(uuid.uuid4())
 
     UpdateExistFldList = request.form.getlist('UpIfCh')
-    proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList)
+    rmvMissingMaterial = (request.form.get('rmvMissingMaterial', False) == 'remove-missing-material')
+    proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList, rmvMissingMaterial)
 
-    if request.form.get('use-local-copy', False) == 'use-local-copy':
-        UMLSSName = request.files.get('SAPFile').filename # type: ignore
-    else:
-        UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid)
-    #endif use local copy
+    uselocalCopy = (request.form.get('use-local-copy', False) == 'use-local-copy')
+    UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy)
     proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, UMLSSName)
 
     acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
@@ -544,7 +570,7 @@ def closeup_UpldMatlList(reqid):
         #     return retinfo
 # closeup_UpldMatlList
 
-from database import HueySession
+# from database import HueySession
 # @app.get("/SSE/UpdMatlLst/<reqid>")
 def progress_UpdML(reqid):
 
