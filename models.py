@@ -297,6 +297,8 @@ class MfrPNtoMaterial(Base):
 
 ##########  SCHEDULED COUNTS
 
+# TODO: bring in User record for Requestor_userid_id foreign key and link to the User model in calvincTools (which should be the same as the User model in this app since we're using the same database for both, but we need to make sure to tell calvincTools about that when we initialize it by passing the cTools_models dict with the User model included, which we do in app.py when we call calvincTools_init())
+# from calvincTools.models import User  # import here to avoid circular import issues with cTools_models['User'] = User in calvincTools_init()
 class CountSchedule(Base):
     __tablename__ = 'WICS_countschedule'
     __table_args__ = (
@@ -321,7 +323,8 @@ class CountSchedule(Base):
     Requestor_userid_id: Mapped[int|None] = mapped_column(BigInteger)
 
     Material: Mapped['MaterialList'] = relationship('MaterialList', back_populates='countschedule')
-    Requestor_userid: Mapped['User|None'] = relationship('User')
+    # figure out how to do the relationship to the User model in calvincTools without creating a circular import issue. One option is to not define the relationship in the CountSchedule model and just query the User model directly when we need to get the user information for the requestor. Another option is to define the relationship as a string and let SQLAlchemy resolve it later, but that can cause issues if there are circular imports. For now, I'll just leave it as a comment and we can figure out the best way to handle it later when we implement the functionality that requires access to the requestor's user information.
+    # Requestor_userid: Mapped['User|None'] = relationship('User')
 
 class WorksheetZones(Base):
     __tablename__ = 'WICS_worksheetzones'
