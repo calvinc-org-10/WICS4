@@ -1,6 +1,7 @@
 import uuid, os, re as regex, ast, json, time
 
 from flask import (
+    current_app,
     session, 
     request, make_response, Response, 
     jsonify, stream_with_context,
@@ -20,6 +21,7 @@ from calvincTools.utils import (
     )
 
 from calvincTools.models import (cParameters, )
+from app import app as thisapp
 from database import (app_db,)
 from models import (
     tmpMaterialListUpdate, SAPPlants_org,
@@ -32,6 +34,9 @@ from models import (
 ####################################################################################
 
 ##### the suite of procs to support fnUpdateMatlListfromSAP
+
+class FatalUploadError(Exception):
+    pass
 
 def proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList, rmvMissingMaterial=False):
     # these first calls should create the async_comm record with pk=reqid.  All subsequent calls will update that same record until we delete it in the cleanup proc at the end.
@@ -73,7 +78,7 @@ def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy=False):
 
     return fName
 
-@huey.task()
+@huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
     acomm = async_comm.set_async_comm_state(
         reqid,
@@ -82,13 +87,14 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
         )
 
     if len(fName)<1 or not os.path.exists(fName):
+        statetext = f'Spreadsheet file {fName} not found. Please try again.'
         acomm = async_comm.set_async_comm_state(
             reqid,
             statecode = 'fatalerr',
-            statetext = f'Spreadsheet file {fName} not found. Please try again.',
+            statetext = statetext,
             result = 'FAIL - file not found',
             )
-        return
+        raise FatalUploadError(statetext)
     
     app_db.session.query(tmpMaterialListUpdate).delete(synchronize_session=False)
     app_db.session.commit()
@@ -118,16 +124,17 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
             colval = str(col.value)
             SAPcol[SAP_SSName_TableName_map[colval]] = col.column - 1
     if (SAPcol['Material'] == None or SAPcol['Plant'] == None):
+        statetext = 'SAP Spreadsheet has bad header row. Plant and/or Material is missing.  See Calvin to fix this.'
         async_comm.set_async_comm_state(
             reqid,
             statecode = 'fatalerr',
-            statetext = 'SAP Spreadsheet has bad header row. Plant and/or Material is missing.  See Calvin to fix this.',
+            statetext = statetext,
             result = 'FAIL - bad spreadsheet',
             )
 
         wb.close()
         os.remove(fName)
-        return
+        raise FatalUploadError(statetext)
 
     numrows = ws.max_row
     nRows = 0
@@ -174,17 +181,27 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
     os.remove(fName)
 
     # report done and move to next step
-    statecode = getattr(async_comm.get_async_comm_state(reqid), 'statecode', 'fatalerr')    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to fatalerr if we can't get the statecode
+    statecode = getattr(async_comm.get_async_comm_state(reqid), 'statecode', 'fatalerr')                 # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to fatalerr if we can't get the statecode
+    statetext = getattr(async_comm.get_async_comm_state(reqid), 'statetext', f'No state for {reqid}')    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to fatalerr if we can't get the statecode
     if statecode != 'fatalerr':
         async_comm.set_async_comm_state(
             reqid,
             statecode = 'done-rdng-sprsht',
             statetext = f'Finished Reading Spreadsheet',
             )
-        proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid)
+        return reqid
+    else:
+        statetext = f'Error: Something went wrong while reading the spreadsheet. Please check the spreadsheet and try again. Details: {statetext}'
+        # async_comm.set_async_comm_state(
+        #     reqid,
+        #     statecode = 'fatalerr',
+        #     statetext = statetext,
+        #     result = 'FAIL - error reading spreadsheet',
+        #     )
+        raise FatalUploadError(statetext)
 # proc_MatlListSAPSprsheet_01ReadSpreadsheet
 
-@huey.task()
+@huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid):
     async_comm.set_async_comm_state(
         reqid,
@@ -241,10 +258,10 @@ def proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid):
         statetext = f'Finished linking SAP MM60 list to existing WICS Materials',
         )
     
-    proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid)
+    return reqid
 # proc_MatlListSAPSprsheet_02_identifyexistingMaterial
 
-@huey.task()
+@huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid):
     def setstate_MatlListSAPSprsheet_03_UpdateExistingRecs(fldName):
         acomm = async_comm.set_async_comm_state(
@@ -294,23 +311,23 @@ def proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid):
         statecode = 'upd-existing-recs-done',
         statetext = f'Finished Updating Existing Records to MM60 values',
         )
-    proc_MatlListSAPSprsheet_04_Remove(reqid)
+    return reqid
 # proc_MatlListSAPSprsheet_03_UpdateExistingRecs
 
-@huey.task()
+@huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_04_Remove(reqid):
     ## MustKeepMatlsDelCond = ''
     ## if MustKeepMatlsDelCond: MustKeepMatlsDelCond += ' AND '
     ## MustKeepMatlsDelCond += 'id IN (SELECT DISTINCT delMaterialLink FROM WICS_tmpmateriallistupdate WHERE recStatus like "DEL%")'
 
-    doRmv_str = getattr(async_comm.get_async_comm_state(f"{reqid}-RmvMissingMatl"), 'statetext', 'False')    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to '' if we can't get the statetext
+    doRmv_str = getattr(async_comm.get_async_comm_state(f"{reqid}-RmvMissingMatl"), 'statetext', 'False')
     doRmv = ast.literal_eval(doRmv_str)
 
     if not doRmv:
         async_comm.set_async_comm_state(
             reqid,
             statecode = 'del-matl-skip',
-            statetext = f'Skipping Removal of WICS Materials no longer in SAP MM60 Materials because user chose to keep them',
+            statetext = f'Not Removing WICS Materials no longer in SAP MM60 Materials',
             )
         proc_MatlListSAPSprsheet_04_Add(reqid)
         return
@@ -349,9 +366,9 @@ def proc_MatlListSAPSprsheet_04_Remove(reqid):
         statecode = 'done-del-matl',
         statetext = 'Finished Removing' if doRmv else 'Skipped Removal of' + 'WICS Materials no longer in SAP MM60 Materials',
         )
-    proc_MatlListSAPSprsheet_04_Add(reqid)
+    return reqid
 # proc_MatlListSAPSprsheet_04_Remove
-@huey.task()
+@huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_04_Add(reqid):
     async_comm.set_async_comm_state(
         reqid,
@@ -412,6 +429,7 @@ def proc_MatlListSAPSprsheet_04_Add(reqid):
         statecode = 'done-add-matl',
         statetext = f'Finished Adding SAP MM60 Materials new to WICS',
         )
+    return reqid
 # proc_MatlListSAPSprsheet_04_Add
 
 def proc_MatlListSAPSprsheet_99_FinalProc(reqid):
@@ -535,7 +553,16 @@ def init_UpldMatlList():
 
     uselocalCopy = (request.form.get('use-local-copy', False) == 'use-local-copy')
     UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy)
-    proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, UMLSSName)
+
+    pipeline = (
+        proc_MatlListSAPSprsheet_01ReadSpreadsheet.s(reqid, UMLSSName)
+        .then(proc_MatlListSAPSprsheet_02_identifyexistingMaterial.s())
+        .then(proc_MatlListSAPSprsheet_03_UpdateExistingRecs.s())
+        .then(proc_MatlListSAPSprsheet_04_Remove.s())
+        .then(proc_MatlListSAPSprsheet_04_Add.s())
+        )
+    huey.enqueue(pipeline)
+    
 
     acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
     # retinfo = make_response(jsonify(reqid))

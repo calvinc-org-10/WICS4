@@ -42,6 +42,21 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
     # you don't have to specify them.
     
     # These settings should be made before callvinc calvincTools_init()
+
+    # patch Huey to work with Flask app context
+    # from async_tasks import huey
+
+    # def patch_huey_for_flask(app):
+
+    #     original_execute = huey.execute
+
+    #     def execute_with_context(task, *args, **kwargs):
+    #         with app.app_context():
+    #             return original_execute(task, *args, **kwargs)
+
+    #     huey.execute = execute_with_context
+
+    # patch_huey_for_flask(flskapp)
     
     # Initialize extensions
     from database import app_db
