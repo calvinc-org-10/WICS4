@@ -1,4 +1,5 @@
 import uuid, os, re as regex, ast, json, time
+from functools import wraps
 
 from flask import (
     current_app,
@@ -37,6 +38,17 @@ from models import (
 
 class FatalUploadError(Exception):
     pass
+
+
+def huey_task_with_app_context(fn):
+    """Ensure each Huey task execution gets a fresh Flask app context."""
+
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        with thisapp.app_context():
+            return fn(*args, **kwargs)
+
+    return wrapped
 
 def proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList, rmvMissingMaterial=False):
     # these first calls should create the async_comm record with pk=reqid.  All subsequent calls will update that same record until we delete it in the cleanup proc at the end.
@@ -78,7 +90,8 @@ def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy=False):
 
     return fName
 
-@huey.context_task(thisapp.app_context())
+@huey.task()
+@huey_task_with_app_context
 def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
     acomm = async_comm.set_async_comm_state(
         reqid,
@@ -201,7 +214,8 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
         raise FatalUploadError(statetext)
 # proc_MatlListSAPSprsheet_01ReadSpreadsheet
 
-@huey.context_task(thisapp.app_context())
+@huey.task()
+@huey_task_with_app_context
 def proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid):
     async_comm.set_async_comm_state(
         reqid,
@@ -261,7 +275,8 @@ def proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid):
     return reqid
 # proc_MatlListSAPSprsheet_02_identifyexistingMaterial
 
-@huey.context_task(thisapp.app_context())
+@huey.task()
+@huey_task_with_app_context
 def proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid):
     def setstate_MatlListSAPSprsheet_03_UpdateExistingRecs(fldName):
         acomm = async_comm.set_async_comm_state(
@@ -314,7 +329,8 @@ def proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid):
     return reqid
 # proc_MatlListSAPSprsheet_03_UpdateExistingRecs
 
-@huey.context_task(thisapp.app_context())
+@huey.task()
+@huey_task_with_app_context
 def proc_MatlListSAPSprsheet_04_Remove(reqid):
     ## MustKeepMatlsDelCond = ''
     ## if MustKeepMatlsDelCond: MustKeepMatlsDelCond += ' AND '
@@ -368,7 +384,8 @@ def proc_MatlListSAPSprsheet_04_Remove(reqid):
         )
     return reqid
 # proc_MatlListSAPSprsheet_04_Remove
-@huey.context_task(thisapp.app_context())
+@huey.task()
+@huey_task_with_app_context
 def proc_MatlListSAPSprsheet_04_Add(reqid):
     async_comm.set_async_comm_state(
         reqid,
@@ -644,4 +661,3 @@ def PLACEHOLDER_fnUpdateMatlListfromSAP():
     # For now, it simply returns a message indicating that the function was called. You can replace this with the actual logic to update the material list from SAP.
     return "Material list update from SAP function called."
 # fnUpdateMatlListfromSAP
-
