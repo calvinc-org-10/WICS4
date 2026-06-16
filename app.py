@@ -3,8 +3,10 @@ from flask_migrate import Migrate
 
 from calvincTools.config import calvincTools_config
 # from calvincTools import calvincTools_init
-from calvincTools.CallerContext import CallerContext
-from calvincTools.calvincTools import calvincTools
+# from calvincTools.CallerContext import CallerContext
+# from calvincTools.calvincTools import calvincTools
+from calvincTools import calvincTools, CallerContext
+
 
 # from database import app_db
 # from app_secrets import *   # pylint: disable=wildcard-import

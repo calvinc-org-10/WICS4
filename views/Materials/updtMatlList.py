@@ -78,7 +78,7 @@ def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy=False):
 
     return fName
 
-@huey.context_task(thisapp.app_context())
+# @huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
     acomm = async_comm.set_async_comm_state(
         reqid,
@@ -201,7 +201,7 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
         raise FatalUploadError(statetext)
 # proc_MatlListSAPSprsheet_01ReadSpreadsheet
 
-@huey.context_task(thisapp.app_context())
+# @huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid):
     async_comm.set_async_comm_state(
         reqid,
@@ -261,7 +261,7 @@ def proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid):
     return reqid
 # proc_MatlListSAPSprsheet_02_identifyexistingMaterial
 
-@huey.context_task(thisapp.app_context())
+# @huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid):
     def setstate_MatlListSAPSprsheet_03_UpdateExistingRecs(fldName):
         acomm = async_comm.set_async_comm_state(
@@ -314,7 +314,7 @@ def proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid):
     return reqid
 # proc_MatlListSAPSprsheet_03_UpdateExistingRecs
 
-@huey.context_task(thisapp.app_context())
+# @huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_04_Remove(reqid):
     ## MustKeepMatlsDelCond = ''
     ## if MustKeepMatlsDelCond: MustKeepMatlsDelCond += ' AND '
@@ -368,7 +368,7 @@ def proc_MatlListSAPSprsheet_04_Remove(reqid):
         )
     return reqid
 # proc_MatlListSAPSprsheet_04_Remove
-@huey.context_task(thisapp.app_context())
+# @huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_04_Add(reqid):
     async_comm.set_async_comm_state(
         reqid,
