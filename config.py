@@ -32,6 +32,8 @@ class Config:
     NEWUSER_DEFAULT_PW = 'TempPassword123!'
 
     USER_AUTHENTICATION_ENABLED = getattr(app_secrets, 'usr_authentication_enabled', True)  # default to True if not specified in app_secrets
+    # debugging - how to load calvincTools templates in subdirectories
+    EXPLAIN_TEMPLATE_LOADING = True
 
 
 class DevelopmentConfig(Config):
