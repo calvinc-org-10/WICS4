@@ -4,6 +4,11 @@ app_secrets/
 templates/SQLhints.html
 templates/appNews.html
 
+# we don't need the huey db in the repo
+huey.db
+huey.db-shm
+huey.db-wal
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
