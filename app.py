@@ -2,7 +2,9 @@ from flask import Flask, app, render_template, request, redirect, url_for, sessi
 from flask_migrate import Migrate
 
 from calvincTools.config import calvincTools_config
-from calvincTools import calvincTools_init
+# from calvincTools import calvincTools_init
+from calvincTools.CallerContext import CallerContext
+from calvincTools.calvincTools import calvincTools
 
 # from database import app_db
 # from app_secrets import *   # pylint: disable=wildcard-import
@@ -66,12 +68,20 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
     from models import cTools_tablenames, cTools_models  # import the cTools models to ensure they are registered with calvincTools before we initialize it. This is necessary for calvincTools to be able to create the tables in the database if they don't already exist. The cTools_models dict is populated in models.py when the cTools models are defined, so we just need to import it here to ensure that the models are registered with calvincTools before we initialize it.
     from sqlalchemy.orm import relationship
     # initialize calvincTools extensions
-    (menuGroups, menuItems, cParameters, cGreetings, User) = calvincTools_init(
-        flskapp, 
-        app_db, 
-        cTools_tablenames=cTools_tablenames, 
-        cTools_models=cTools_models
-        ).cTools_tables
+    appContext:CallerContext = CallerContext(
+        flaskapp=flskapp,
+        config=flskapp.config,
+        app_db=app_db,
+        cTools_tablenames=cTools_tablenames,
+        cTools_models=cTools_models,
+        )
+    cTools = calvincTools(appContext)
+    # (menuGroups, menuItems, cParameters, cGreetings, User) = calvincTools_init(
+    #     flskapp, 
+    #     app_db, 
+    #     cTools_tablenames=cTools_tablenames, 
+    #     cTools_models=cTools_models
+    #     ).cTools_tables
 
     # initialize Huey
     from database import huey_engine, set_SQLite_WAL_mode
