@@ -20,6 +20,7 @@ class Config:
 
     # app specific
     DEV_MODE = app_secrets.sysver_key == 'DEV'
+    APP_NAME = "WICS4"
     APP_VERSION = sysver[app_secrets.sysver_key]
     APP_LOGO_URL = '/assets/App-Logo.png'
     APP_NEWS_HTMLFILE = 'appNews.html'
@@ -29,6 +30,8 @@ class Config:
     # this is a default value for new user password,
     # should be changed in production and moved to app_secrets.py or environment variable for better security
     NEWUSER_DEFAULT_PW = 'TempPassword123!'
+
+    USER_AUTHENTICATION_ENABLED = getattr(app_secrets, 'usr_authentication_enabled', True)  # default to True if not specified in app_secrets
 
 
 class DevelopmentConfig(Config):
