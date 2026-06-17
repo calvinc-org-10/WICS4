@@ -48,6 +48,6 @@ FormNameToURL_Map['matllistupdt'.lower()] = (None, views.Materials.updtMatlList.
 # FormNameToURL_Map['PartTypeFm'.lower()] = ('PartTypeForm', forms.PartTypesForm)
 
 
-FormNameToURL_Map['test01'.lower()] = ('auth.user_list', None)
+FormNameToURL_Map['test01'.lower()] = ('', _newcode.formlayouttest.testformlayout)
 FormNameToURL_Map['test02'.lower()] = ('', None)
 # FormNameToURL_Map['test02'.lower()] = ('', None)
