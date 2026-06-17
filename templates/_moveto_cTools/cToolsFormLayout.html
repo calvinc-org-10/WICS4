@@ -1,0 +1,32 @@
+{% extends "cTools_common.html" %}
+
+
+{% block boddy %}
+{% block layoutForm %}
+<div class="container">
+    {% block layoutFormFixedTop %}
+    {% endblock layoutFormFixedTop %}
+</div>
+<hr>
+{% block formBody %}{% endblock %}
+<div class="container">
+    {% block layoutFormPages %}
+    {% endblock layoutFormPages %}
+</div>
+<hr>
+<div class="container">
+    {% block layoutFormFixedBottom %}
+    {% endblock layoutFormFixedBottom %}
+</div>
+<hr style="height: 10px; border: none; background-color: #333;">
+<div class="container">
+    {% block layoutButtons %}
+    {% endblock layoutButtons %}
+</div>
+<div class="container">
+    {% block _statusBar %}
+    {% endblock _statusBar %}
+</div>
+{% endblock layoutForm %}
+{% endblock boddy %}
+
