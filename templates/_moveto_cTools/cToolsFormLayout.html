@@ -3,10 +3,28 @@
 
 {% block boddy %}
 {% block layoutForm %}
+
 <div class="container">
-    {% block layoutFormFixedTop %}
-    {% endblock layoutFormFixedTop %}
+  <div class="row align-items-center">
+    
+    {# Main Content Column #}
+    <div class="{% if newRecord_flag is defined %}col-11{% else %}col-12{% endif %}">
+      {% block layoutFormFixedTop %}
+        {# Child forms render here #}
+      {% endblock layoutFormFixedTop %}
+    </div>
+
+    {# Far Right Badge Column #}
+    {% if newRecord_flag is defined %}
+      <div class="col-1 ms-auto text-end">
+        {# Red text on white background with a red border #}
+        <span class="badge bg-white text-danger border border-danger fs-6">New Record</span>
+      </div>
+    {% endif %}
+
+  </div>
 </div>
+
 <hr>
 <div class="container">
     {% block formBody %}

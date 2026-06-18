@@ -56,6 +56,7 @@ def testformlayout():
         # (hopefully,) this is the initial phase; all others will be part of a POST request
 
         cntext = {
+            'newRecord_flag': True,
             'form': theform,
             'reqid': -1,
             }

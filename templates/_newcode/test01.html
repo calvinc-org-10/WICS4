@@ -5,13 +5,15 @@
 {% endblock layoutFormFixedTop %}
 
 {% block formBody %}
-    {{ form }}
+    {{ form.testfield1 }}
+    {{ form.testfield2 }}
 {% endblock formBody %}
 
 {% block layoutButtons %}
 <div class="container">
     <button type="button" class="btn btn-primary">Submit</button>
     <button type="button" class="btn btn-secondary">Cancel</button>
+    {{ form.submit }}
 </div>
 {% endblock layoutButtons %}
 
