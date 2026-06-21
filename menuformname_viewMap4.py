@@ -20,7 +20,8 @@ FormNameToURL_Map = {}
 # FormNameToURL_Map['l6-wics-uadmin'.lower()] = FormNameToURL_Map['l10-wics-uadmin']
 # FormNameToURL_Map['django-admin'.lower()] = (None, LoadAdmin)
 
-### FormNameToURL_Map['frmcountentry'.lower()] = ('CountEntryForm', forms.CountEntryForm)
+FormNameToURL_Map['frmcountentry'.lower()] = (None, _newcode.frmCountEntryView.fnCountEntryView)
+##FormNameToURL_Map['frmcountentry'.lower()] = ('CountEntryForm', _newcode.frmCountEntryView.fnCountEntryView)
 # FormNameToURL_Map['frmUploadCountEntry'.lower()] = ('UploadActualCountSprsht', forms.spreadsheet.UploadActCountSprsht)
 # FormNameToURL_Map['frmcountsummarypreview'.lower()] = ('CountSummaryReport', forms.fmActualCounts.rptCountSummary)
 # FormNameToURL_Map['frmrequestedcountsummary'.lower()] = ('CountSummaryReport-v-init', None)
