@@ -1,112 +1,122 @@
+from flask_wtf import FlaskForm
+import wtforms as forms
+from wtforms.validators import DataRequired, Disabled
+
+from ..models import ActualCounts, MaterialList, WhsePartTypes, CountSchedule
+from ..database import Repository, app_db
 
 
-class CountEntryForm(forms.ModelForm):
-    id = forms.IntegerField(required=False, widget=forms.HiddenInput)
-    CountDate = forms.DateField(required=True, initial=calvindate().today().as_datetime())
-    CycCtID = forms.CharField(required=False)
-    Material = forms.CharField(required=True)
+class CountEntryForm(FlaskForm):
+    id = forms.IntegerField()
+    CountDate = forms.DateField(validators=[DataRequired()])
+    CycCtID = forms.StringField()
+    Material = forms.StringField(validators=[DataRequired()])
         # Material is handled this way because of the way it's done in the html.
         # later, create a DropdownText widget??
-    Counter = forms.CharField(required=True)
-    LocationOnly = forms.BooleanField(required=False)
-    LOCATION = forms.CharField(required=True)
-    CTD_QTY_Expr = forms.CharField(required=False)
-    FLAG_PossiblyNotRecieved = forms.BooleanField(required=False)
-    FLAG_MovementDuringCount = forms.BooleanField(required=False)
-    PKGID_Desc = forms.CharField(required=False)
-    TAGQTY = forms.CharField(required=False)
-    Notes  = forms.CharField(required=False)
-    class Meta:
+    Material_id = forms.HiddenField()
+    Counter = forms.StringField(validators=[DataRequired()])
+    LocationOnly = forms.BooleanField()
+    LOCATION = forms.StringField(validators=[DataRequired()])
+    CTD_QTY_Expr = forms.StringField()
+    FLAG_PossiblyNotRecieved = forms.BooleanField()
+    FLAG_MovementDuringCount = forms.BooleanField()
+    PKGID_Desc = forms.StringField()
+    TAGQTY = forms.StringField()
+    Notes  = forms.StringField()
+
+    class Meta(FlaskForm.Meta):
         model = ActualCounts
-        fields = ['id', 'CountDate', 'CycCtID', 'Counter', 'LocationOnly', 
-                'LOCATION', 'CTD_QTY_Expr', 'PKGID_Desc', 'TAGQTY',
-                'FLAG_PossiblyNotRecieved', 'FLAG_MovementDuringCount', 'Notes']
-    def save(self, req: str|HttpRequest|User):
-        dbUsing = user_db(req)
-        dbmodel = self.Meta.model
-        required_fields = ['CountDate', 'Material', 'Counter'] #id handled separately
-        PriK = self['id'].value()
-        M = MaterialList.objects.using(dbUsing).get(pk=self.data['MatlPK']) 
-        if not str(PriK).isnumeric(): PriK = -1
-        existingrec = dbmodel.objects.using(dbUsing).filter(pk=PriK).exists()
-        if existingrec: rec = dbmodel.objects.using(dbUsing).get(pk=PriK)
-        else:   rec = dbmodel()
-        for fldnm in self.changed_data + required_fields:
-            if fldnm=='id': continue
-            if fldnm=='Material':
-                setattr(rec,fldnm, M)
-            else:
-                setattr(rec, fldnm, self.cleaned_data[fldnm])
+
+    # handle Material <-> Material_id conversion 
         
-        rec.save(using=dbUsing)
-        return rec
+    # move to pre-processing before save, or to the view?
+    # def save(self, req: str|HttpRequest|User):
+    #     dbUsing = user_db(req)
+    #     # dbmodel = self.Meta.model
+    #     required_fields = ['CountDate', 'Material', 'Counter'] #id handled separately
+    #     PriK = self['id'].value()
+    #     M = MaterialList.objects.using(dbUsing).get(pk=self.data['MatlPK']) 
+    #     if not str(PriK).isnumeric(): PriK = -1
+    #     existingrec = dbmodel.objects.using(dbUsing).filter(pk=PriK).exists()
+    #     if existingrec: rec = dbmodel.objects.using(dbUsing).get(pk=PriK)
+    #     else:   rec = dbmodel()
+    #     for fldnm in self.changed_data + required_fields:
+    #         if fldnm=='id': continue
+    #         if fldnm=='Material':
+    #             setattr(rec,fldnm, M)
+    #         else:
+    #             setattr(rec, fldnm, self.cleaned_data[fldnm])
+        
+    #     rec.save(using=dbUsing)
+    #     return rec
 
 
-class RelatedMaterialInfo(forms.ModelForm):
-    Description = forms.CharField(max_length=250, disabled=True, required=False)
-    PartType = forms.ModelChoiceField(queryset=WhsePartTypes.objects.none(), empty_label=None, required=False)
-    TypicalContainerQty = forms.CharField(max_length=100,required=False)
-    TypicalPalletQty = forms.CharField(max_length=100,required=False)
-    Notes = forms.CharField(required=False)
-    class Meta:
+class RelatedMaterialInfo(FlaskForm):
+    Description = forms.StringField(validators=[Disabled()])
+    PartType = forms.SelectField(choices=[(rec.id, rec.WhsePartType) for rec in WhsePartTypes.query.order_by(WhsePartTypes.WhsePartType).all()])
+    #                             app_db.session.query(WhsePartTypes).order_by(WhsePartTypes.WhsePartType).all())
+    TypicalContainerQty = forms.StringField()
+    TypicalPalletQty = forms.StringField()
+    Notes = forms.StringField()
+    
+    class Meta(FlaskForm.Meta):
         model = MaterialList
-        fields = ['id', 'Description', 'PartType', 
-                'TypicalContainerQty', 'TypicalPalletQty', 'Notes']
-    def __init__(self, id, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.id = id
-        self.fields['PartType'].queryset=WhsePartTypes.objects.all().order_by('WhsePartType').all()
-    def save(self, req:str|HttpRequest|User):
-        dbUsing = user_db(req)
-        dbmodel = self.Meta.model
-        required_fields = [] #id handled separately
-        PriK = self.id
-        if not str(PriK).isnumeric(): PriK = -1
-        existingrec = dbmodel.objects.using(dbUsing).filter(pk=PriK).exists()
-        if existingrec: rec = dbmodel.objects.using(dbUsing).get(pk=PriK)
-        else:  raise Exception('Saving Related Material with no PK')  # rec = dbmodel()
-        for fldnm in self.changed_data + required_fields:
-            if fldnm=='id': continue
-            if fldnm=='Material':
-                # no special processing - Material is a string here, not a ForeignField
-                setattr(rec, fldnm, self.cleaned_data[fldnm])
-            else:
-                setattr(rec, fldnm, self.cleaned_data[fldnm])
+
+    # def __init__(self, id, *args, **kwargs) -> None:
+    #     super().__init__(*args, **kwargs)
+    #     self.id = id
+    #     self.fields['PartType'].queryset=WhsePartTypes.objects.all().order_by('WhsePartType').all()
+    # def save(self, req:str|HttpRequest|User):
+    #     dbUsing = user_db(req)
+    #     dbmodel = self.Meta.model
+    #     required_fields = [] #id handled separately
+    #     PriK = self.id
+    #     if not str(PriK).isnumeric(): PriK = -1
+    #     existingrec = dbmodel.objects.using(dbUsing).filter(pk=PriK).exists()
+    #     if existingrec: rec = dbmodel.objects.using(dbUsing).get(pk=PriK)
+    #     else:  raise Exception('Saving Related Material with no PK')  # rec = dbmodel()
+    #     for fldnm in self.changed_data + required_fields:
+    #         if fldnm=='id': continue
+    #         if fldnm=='Material':
+    #             # no special processing - Material is a string here, not a ForeignField
+    #             setattr(rec, fldnm, self.cleaned_data[fldnm])
+    #         else:
+    #             setattr(rec, fldnm, self.cleaned_data[fldnm])
         
-        rec.save(using=dbUsing)
-        return rec
+    #     rec.save(using=dbUsing)
+    #     return rec
 
 
-class RelatedScheduleInfo(forms.ModelForm):
-    CountDate = forms.DateField(disabled=True, required=False)
-    Counter = forms.CharField(max_length=250, disabled=True, required=False)
-    Priority = forms.CharField(max_length=50, disabled=True, required=False)
-    ReasonScheduled = forms.CharField(max_length=250, disabled=True, required=False)
-    Notes = forms.CharField(max_length=250, disabled=True, required=False)
-    class Meta:
+class RelatedScheduleInfo(FlaskForm):
+    CountDate = forms.DateField(validators=[Disabled()])
+    Counter = forms.StringField(validators=[Disabled()])
+    Priority = forms.StringField(validators=[Disabled()])
+    ReasonScheduled = forms.StringField(validators=[Disabled()])
+    Notes = forms.StringField(validators=[Disabled()])
+    
+    class Meta(FlaskForm.Meta):
         model = CountSchedule
-        fields = ['id', 'CountDate', 'Counter', 'Priority', 'ReasonScheduled', 
-                'Notes']
-    def __init__(self, id, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.id = id
-    def save(self, req:str|HttpRequest|User):
-        dbUsing = user_db(req)
-        dbmodel = self.Meta.model
-        required_fields = ['CountDate', 'Material'] #id handled separately
-        PriK = self.id
-        M = MaterialList.objects.using(dbUsing).get(pk=self.data['MatlPK']) 
-        if not str(PriK).isnumeric(): PriK = -1
-        existingrec = dbmodel.objects.using(dbUsing).filter(pk=PriK).exists()
-        if existingrec: rec = dbmodel.objects.using(dbUsing).get(pk=PriK)
-        else:  raise Exception('Saving Related Schedule Info with no PK')   # rec = dbmodel()
-        for fldnm in self.changed_data + required_fields:
-            if fldnm=='id': continue
-            if fldnm=='Material':
-                setattr(rec,fldnm, M)
-            else:
-                setattr(rec, fldnm, self.cleaned_data[fldnm])
+
+    # def __init__(self, id, *args, **kwargs) -> None:
+    #     super().__init__(*args, **kwargs)
+    #     self.id = id
+    # def save(self, req:str|HttpRequest|User):
+    #     dbUsing = user_db(req)
+    #     dbmodel = self.Meta.model
+    #     required_fields = ['CountDate', 'Material'] #id handled separately
+    #     PriK = self.id
+    #     M = MaterialList.objects.using(dbUsing).get(pk=self.data['MatlPK']) 
+    #     if not str(PriK).isnumeric(): PriK = -1
+    #     existingrec = dbmodel.objects.using(dbUsing).filter(pk=PriK).exists()
+    #     if existingrec: rec = dbmodel.objects.using(dbUsing).get(pk=PriK)
+    #     else:  raise Exception('Saving Related Schedule Info with no PK')   # rec = dbmodel()
+    #     for fldnm in self.changed_data + required_fields:
+    #         if fldnm=='id': continue
+    #         if fldnm=='Material':
+    #             setattr(rec,fldnm, M)
+    #         else:
+    #             setattr(rec, fldnm, self.cleaned_data[fldnm])
         
-        rec.save(using=dbUsing)
-        return rec
+    #     rec.save(using=dbUsing)
+    #     return rec
 

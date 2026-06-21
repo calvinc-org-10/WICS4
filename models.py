@@ -157,6 +157,12 @@ cTools_tablenames['User'] = 'WICS4_users'  # table name is different case than t
 
 class Base(DeclarativeBase):
     query = app_db.session.query_property()
+    
+    def save(self):
+        """Save the current instance to the database."""
+        app_db.session.add(self)
+        app_db.session.commit()
+        return self
 
 
 ##########  ORGANIZATIONS
