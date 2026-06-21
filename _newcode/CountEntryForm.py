@@ -2,8 +2,8 @@ from flask_wtf import FlaskForm
 import wtforms as forms
 from wtforms.validators import DataRequired, Disabled
 
-from ..models import ActualCounts, MaterialList, WhsePartTypes, CountSchedule
-from ..database import Repository, app_db
+from models import ActualCounts, MaterialList, WhsePartTypes, CountSchedule
+from database import Repository, app_db
 
 
 class CountEntryForm(FlaskForm):

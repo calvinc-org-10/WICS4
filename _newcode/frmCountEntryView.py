@@ -11,7 +11,7 @@ from flask import (
 from calvincTools.utils import checkTemplate_and_render
 
 from .CountEntryForm import CountEntryForm, RelatedMaterialInfo, RelatedScheduleInfo
-from ..models import ActualCounts, MaterialList, WhsePartTypes
+from models import ActualCounts, MaterialList, WhsePartTypes
 
 @login_required
 def fnCountEntryView( 
