@@ -8,6 +8,7 @@ from flask import (
     current_app,
     )
 
+from calvincTools.utils import checkTemplate_and_render
 
 from .CountEntryForm import CountEntryForm, RelatedMaterialInfo, RelatedScheduleInfo
 from ..models import ActualCounts, MaterialList, WhsePartTypes
@@ -80,7 +81,7 @@ def fnCountEntryView(
         try:
             matlRec = modelSubs[0].query.get(matlRecNum)
         except:
-            currRec = modelSubs[0]()
+            matlRec = modelSubs[0]()
         #schedRecs = modelSubs[1].objects.filter(org=_userorg, CountDate=req.POST[prefixvals['main']+'-CountDate'], Material=matlRec)
 
         # what's changed in main form?
@@ -130,8 +131,8 @@ def fnCountEntryView(
         matlRec = modelSubs[0]()
 
         # TODO: add protection against no records
-        recFirstPK = modelMain.query.order_by(modelMain.id).first().id
-        recLastPK = modelMain.query.order_by(modelMain.id.desc()).first().id
+        recFirstPK = getattr(modelMain.query.order_by(modelMain.id).first(), 'id', 0)
+        recLastPK = getattr(modelMain.query.order_by(modelMain.id.desc()).first(), 'id', 0)
         
         if gotoCommand == 'New':
             recNum = 0
@@ -152,7 +153,7 @@ def fnCountEntryView(
                 elif recNum <= recFirstPK:
                     recNum = recFirstPK
                 else:
-                    recNum = modelMain.query.filter(modelMain.id < recNum).order_by(modelMain.id.desc()).first().id
+                    recNum = getattr(modelMain.query.filter(modelMain.id < recNum).order_by(modelMain.id.desc()).first(), 'id', 0)
             except:
                 recNum = 0
         elif gotoCommand == 'Next':
@@ -162,7 +163,7 @@ def fnCountEntryView(
                 elif recNum >= recLastPK:
                     recNum = recLastPK
                 else:
-                    recNum = modelMain.query.filter(modelMain.id > recNum).order_by(modelMain.id).first().id
+                    recNum = getattr(modelMain.query.filter(modelMain.id > recNum).order_by(modelMain.id).first(), 'id', 0)
             except:
                 recNum = 0
         else:
@@ -170,7 +171,11 @@ def fnCountEntryView(
 
         if recNum:
             currRec = modelMain.query.get(recNum)
-            matlRec = currRec.Material  # subject to change
+            matlRec = getattr(currRec, 'Material', None)  # subject to change
+        else:
+            currRec = modelMain(**initialvals['main'])
+            matlRec = modelSubs[0](**initialvals['matl'])
+        #endif recNum
 
         # if gotoCommand == 'ChgKey':
         #     currRec.CountDate = reqDate
@@ -187,48 +192,63 @@ def fnCountEntryView(
         # I know this is broken now. I'll get around to it. I need to rethink the flow of how the subforms are built and populated. I want to be able to build the subforms with the main form, so that they can be displayed together, and then have them populate and save separately. I also need to think about how to handle the case where there is no material record, or no schedule record, and how to handle the case where there are multiple schedule records for a given date and material.
         if matlRec:
             matlSubFm = FormSubs[0](matlRec.pk, instance=matlRec, prefix=prefixvals['matl'])
+            matlRecNum = matlRec.id
         else:
             matlSubFm = FormSubs[0](None, initial=initialvals['matl'], prefix=prefixvals['matl'])
+            matlRecNum = 0
     #endif rec.method == 'POST'
 
     # all counts for this Material today
-    # if matlRec:
-    #     matchDate = reqDate
-    #     if currRec: matchDate = currRec.CountDate
-    #     todayscounts = modelMain.query.filter(modelMain.CountDate==matchDate,modelMain.Material=matlRec)
-    # else: 
-    #     todayscounts = modelMain()
-    todayscounts = modelMain()
-
-    if currRec:
-        getDate = currRec.CountDate
-        if matlRec and modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
-            schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
-        else:
-            schedinfo = modelSubs[1].objects.using(dbUsing).none()
-    elif (MatlNum!=0) and (gotoCommand==None):
-        # review and clean up this block!
-        if MatlNum != 0:
-            # fill in MatlInfo and CountSchedInfo
-            if recNum > 0: getDate = currRec.CountDate 
-            else: getDate = reqDate
-            if modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
-                schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
-            else:
-                schedinfo = modelSubs[1].objects.using(dbUsing).none()
-        elif recNum > 0:
-            # ??????????? shouldn't this already be handled?  Think about it...
-            # fill in MatlInfo and CountSchedInfo
-            getDate = currRec.CountDate
-            if modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
-                schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
-            else:
-                schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    if matlRec:
+        matchDate = reqDate
+        if currRec: matchDate = currRec.CountDate
+        todayscounts = modelMain.query.filter(modelMain.CountDate==matchDate,modelMain.Material_id==matlRec).all()
     else: 
-        schedinfo = modelSubs[1].objects.using(dbUsing).none()
-    #endif currRec
-    if not schedinfo: schedFm = FormSubs[1](None, initial=initialvals['schedule'], prefix=prefixvals['schedule'])
-    else: schedFm = FormSubs[1](schedinfo.pk, instance=schedinfo, prefix=prefixvals['schedule'])
+        # todayscounts = modelMain()
+        todayscounts = None
+    # endif matlRec
+
+    # if currRec:
+    #     getDate = currRec.CountDate
+    #     if matlRec and modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
+    #         schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
+    #     else:
+    #         schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    # elif (MatlNum!=0) and (gotoCommand==None):
+    #     # review and clean up this block!
+    #     if MatlNum != 0:
+    #         # fill in MatlInfo and CountSchedInfo
+    #         if recNum > 0: getDate = currRec.CountDate 
+    #         else: getDate = reqDate
+    #         if modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
+    #             schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
+    #         else:
+    #             schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    #     elif recNum > 0:
+    #         # ??????????? shouldn't this already be handled?  Think about it...
+    #         # fill in MatlInfo and CountSchedInfo
+    #         getDate = currRec.CountDate
+    #         if modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
+    #             schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
+    #         else:
+    #             schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    # else: 
+    #     schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    # #endif currRec
+
+    # schedule info for this material and date
+    schedinfo = None
+    if currRec and matlRec:
+        getDate = currRec.CountDate
+        schedinfo = modelSubs[1].query.filter(modelSubs[1].CountDate==getDate, modelSubs[1].Material_id==matlRec.id).first()
+    else:
+        schedinfo = None    
+    # endif currRec and matlRec
+    if not schedinfo: 
+        schedFm = FormSubs[1](formdata=None, obj=initialvals['schedule'], prefix=prefixvals['schedule'])
+    else: 
+        schedFm = FormSubs[1](formdata=None, obj=schedinfo, prefix=prefixvals['schedule'])
+    # endif schedinfo
 
     # CountEntryForm MaterialList dropdown
     matlchoiceForm = {}
@@ -238,7 +258,7 @@ def fnCountEntryView(
         if MatlNum==None: MatlNum = 0
         ## matlchoiceForm['gotoItem'] = {'Material':MatlNum}
         matlchoiceForm['gotoItem'] = ''
-    matlchoiceForm['choicelist'] = VIEW_materials.objects.using(dbUsing).all().values('id','Material_org')
+    matlchoiceForm['choicelist'] = [{'id': rec.id, 'Material_org': f'{rec.Material}:{rec.org.orgname}'} for rec in  MaterialList.query.all()]
 
     # display the form
     cntext = {'frmMain': mainFm,
@@ -252,5 +272,5 @@ def fnCountEntryView(
             'recNum': recNum,
             }
     templt = 'frm_CountEntry.html'
-    return render(req, templt, cntext)
+    return checkTemplate_and_render(templt, cntext)
 

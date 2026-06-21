@@ -1,7 +1,4 @@
-{% extends "WICS_common.html" %}
-{% load widget_tweaks %}
-{% load evaluate_arithmetic %}
-{% load static %}
+{% extends "_moveto_cTools/cToolsFormLayout.html" %}
 
 {% block customCSS %}
 button:focus {
@@ -12,7 +9,7 @@ button:focus {
     -moz-box-shadow: 0 0 5px rgba(0, 0, 255, 1);
     border:1px solid rgba(0,0,255, 0.8); 
 }
-{% include "proposed-table-CSS.css" %}
+{% include "_moveto_cTools\proposed-table-CSS.css" %}
 {% endblock %}
 
 {% block tTitle %}Count Entry{% endblock %}
@@ -46,15 +43,16 @@ button:focus {
         </div>
     {% endif %}
 {% endblock %}
-{% block boddy %}
     <hr>
-
+{% block layoutFormFixedTop %}
     {{ recNum }} / {{ frmMain.id.value }}
     <span class="col-5 bg-secondary text-warning">Count Date, Material, Actual Counter, Location and either LocOnly or Ctd Qty are required before Saving the form</span>
+{% endblock layoutFormFixedTop %}
 
+{% block formBody %}
     <form id="CEForm" class="trackformchanges" method="post">
-        {% csrf_token %}
-        <!-- form header -->
+        {{ frmMain.hidden_tag() }}
+         <!-- form header -->
         {% if frmMain.errors %}{{ frmMain.errors }}{% endif %}
         {{ frmMain.id }}
         <input type="hidden" id="RecPK" name="RecPK" value={{ recNum }} required></input>
@@ -205,7 +203,9 @@ button:focus {
 			{% endif %}
 		</div>
     </form>
+{% endblock formBody %}
 
+{% block layoutButtons %}
     <!-- form footer -->
     <hr>
     <div class="container">
@@ -233,6 +233,7 @@ button:focus {
             </div>
         </div>
     </div>
+{% endblock layoutButtons %}
 
 <div id="modalGeneric" class="modal" >
 </div>
@@ -497,5 +498,4 @@ button:focus {
     }
 
 </script>
-{% endblock %}
 
