@@ -41,7 +41,7 @@ def fnCountEntryView(
         'schedule': 'schedule',
     }
     initialvals = {
-        'main': {'CountDate': reqDate,'Counter':current_user().username},
+        'main': {'CountDate': reqDate,'Counter':current_user.username},
         'matl': {},
         'schedule': {'CountDate': reqDate},
     }
@@ -191,10 +191,10 @@ def fnCountEntryView(
             mainFm = FormMain(formdata=None, obj=initialvals['main'],  prefix=prefixvals['main'])
         # I know this is broken now. I'll get around to it. I need to rethink the flow of how the subforms are built and populated. I want to be able to build the subforms with the main form, so that they can be displayed together, and then have them populate and save separately. I also need to think about how to handle the case where there is no material record, or no schedule record, and how to handle the case where there are multiple schedule records for a given date and material.
         if matlRec:
-            matlSubFm = FormSubs[0](matlRec.pk, instance=matlRec, prefix=prefixvals['matl'])
+            matlSubFm = FormSubs[0](formata=None, obj=matlRec, prefix=prefixvals['matl'])
             matlRecNum = matlRec.id
         else:
-            matlSubFm = FormSubs[0](None, initial=initialvals['matl'], prefix=prefixvals['matl'])
+            matlSubFm = FormSubs[0](formdata=None, obj=initialvals['matl'], prefix=prefixvals['matl'])
             matlRecNum = 0
     #endif rec.method == 'POST'
 
@@ -202,7 +202,7 @@ def fnCountEntryView(
     if matlRec:
         matchDate = reqDate
         if currRec: matchDate = currRec.CountDate
-        todayscounts = modelMain.query.filter(modelMain.CountDate==matchDate,modelMain.Material_id==matlRec).all()
+        todayscounts = modelMain.query.filter(modelMain.CountDate==matchDate,modelMain.Material_id==matlRecNum).all()
     else: 
         # todayscounts = modelMain()
         todayscounts = None
@@ -271,6 +271,6 @@ def fnCountEntryView(
             'changed_data': chgd_dat,
             'recNum': recNum,
             }
-    templt = 'frm_CountEntry.html'
+    templt = '_newcode/frm_CountEntry.html'
     return checkTemplate_and_render(templt, cntext)
 
