@@ -539,3 +539,17 @@ class async_comm(HueyBase):
     
 ########## 
 ########## 
+
+###############################################################################
+###########  choice lists ############
+###############################################################################
+
+def choices_for_whseparttypes():
+    session = app_db.session
+    return [(str(wpt.id), wpt.WhsePartType) for wpt in session.query(WhsePartTypes).order_by(WhsePartTypes.PartTypePriority, WhsePartTypes.WhsePartType).all()]
+
+def choices_for_materials():
+    session = app_db.session
+    return [(str(m.id), f'{m.Material}:{m.org.orgname}') for m in session.query(MaterialList).order_by(MaterialList.Material).all()]
+
+

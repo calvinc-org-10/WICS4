@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 import wtforms as forms
 from wtforms.validators import DataRequired, Disabled
 
-from models import ActualCounts, MaterialList, WhsePartTypes, CountSchedule
+from models import ActualCounts, MaterialList, WhsePartTypes, CountSchedule, choices_for_whseparttypes
 from database import Repository, app_db
 
 
@@ -53,7 +53,7 @@ class CountEntryForm(FlaskForm):
 
 class RelatedMaterialInfo(FlaskForm):
     Description = forms.StringField(validators=[Disabled()])
-    PartType = forms.SelectField(choices=[(rec.id, rec.WhsePartType) for rec in WhsePartTypes.query.order_by(WhsePartTypes.WhsePartType).all()])
+    PartType = forms.SelectField(choices=choices_for_whseparttypes())
     #                             app_db.session.query(WhsePartTypes).order_by(WhsePartTypes.WhsePartType).all())
     TypicalContainerQty = forms.StringField()
     TypicalPalletQty = forms.StringField()
