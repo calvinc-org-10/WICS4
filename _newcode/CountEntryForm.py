@@ -53,7 +53,7 @@ class CountEntryForm(FlaskForm):
 
 class RelatedMaterialInfo(FlaskForm):
     Description = forms.StringField(validators=[Disabled()])
-    PartType = forms.SelectField(choices=choices_for_whseparttypes())
+    PartType = forms.SelectField(choices=[])
     #                             app_db.session.query(WhsePartTypes).order_by(WhsePartTypes.WhsePartType).all())
     TypicalContainerQty = forms.StringField()
     TypicalPalletQty = forms.StringField()
@@ -61,6 +61,11 @@ class RelatedMaterialInfo(FlaskForm):
     
     class Meta(FlaskForm.Meta):
         model = MaterialList
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Load choices at runtime (request/app context), not at module import.
+        self.PartType.choices = choices_for_whseparttypes()  # type: ignore[assignment]
 
     # def __init__(self, id, *args, **kwargs) -> None:
     #     super().__init__(*args, **kwargs)
