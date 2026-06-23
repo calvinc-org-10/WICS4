@@ -272,5 +272,5 @@ def fnCountEntryView(
             'recNum': recNum,
             }
     templt = '_newcode/frm_CountEntry.html'
-    return checkTemplate_and_render(templt, cntext)
+    return checkTemplate_and_render(templt, **cntext)
 
