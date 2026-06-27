@@ -177,11 +177,12 @@ def fnCountEntryView(
             matlRec = modelSubs[0](**initialvals['matl'])
         #endif recNum
 
-        # if gotoCommand == 'ChgKey':
-        #     currRec.CountDate = reqDate
-        #     matlRec = modelSubs[0].objects.using(dbUsing).get(pk=MatlNum)
-        #     currRec.Material = matlRec
-        #     currRec.Material_id = MatlNum
+        if gotoCommand == 'ChgKey':
+            if currRec:
+                currRec.CountDate = reqDate
+                matlRec = modelSubs[0].query.get(MatlNum)
+                currRec.Material_id = MatlNum
+                currRec.Material = matlRec
 
         # at this point, currRec and matlRec s/b correct
 
@@ -252,10 +253,12 @@ def fnCountEntryView(
 
     # CountEntryForm MaterialList dropdown
     matlchoiceForm = {}
-    if matlRec:
-        matlchoiceForm['gotoItem'] = matlRec        # the template pulls Material from this record
+    if MatlNum==None: MatlNum = 0
+    if MatlNum:     # this implies matlRec exists and is a real record, so we can use it to populate the dropdown
+        assert matlRec is not None, "matlRec should not be None when MatlNum is provided"
+        # matlchoiceForm['gotoItem'] = matlRec        # the template pulls Material from this record
+        matlchoiceForm['gotoItem'] = f'{matlRec.Material}:{matlRec.org.orgname}'
     else:
-        if MatlNum==None: MatlNum = 0
         ## matlchoiceForm['gotoItem'] = {'Material':MatlNum}
         matlchoiceForm['gotoItem'] = ''
     matlchoiceForm['choicelist'] = [{'id': rec.id, 'Material_org': f'{rec.Material}:{rec.org.orgname}'} for rec in  MaterialList.query.all()]
@@ -263,6 +266,7 @@ def fnCountEntryView(
     # display the form
     cntext = {'frmMain': mainFm,
             'frmMatlInfo': matlSubFm,
+            'MatlNum': MatlNum,
             'todayscounts': todayscounts,
             'matlchoiceForm':matlchoiceForm,
             'noSchedInfo':(not schedinfo),

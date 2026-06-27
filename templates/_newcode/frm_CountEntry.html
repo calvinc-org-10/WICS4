@@ -67,7 +67,7 @@ button:focus {
             <div class="col-4">Material:
                 {# {% render_field frmMain.Material onchange="loadExtraInfo()" %}</div> #}
                 <input list="Material-list"
-                    id="{{frmMain.Material.id_for_label}}" name="{{frmMain.Material.html_name}}"
+                    id="{{frmMain.Material.id}}" name="{{frmMain.Material.html_name}}"
                     class="border border-5 border-danger fw-bold"
                     onfocus="$(this).select();"
                     onchange="loadExtraInfo();"
@@ -78,7 +78,7 @@ button:focus {
                 <span class="bi-caret-down-square"
                     style="position:relative;top:+0px;font-size:20px;left:-30px;"
                     tabindex = "-1"
-                    onclick="$('#{{frmMain.Material.id_for_label}}').focus();">
+                    onclick="$('#{{frmMain.Material.id}}').focus();">
                 </span>
                 {% if not matlchoiceForm.gotoItem %}
                     <!-- Material has no value yet -->
@@ -235,19 +235,24 @@ button:focus {
     </div>
 {% endblock layoutButtons %}
 
-<div id="modalGeneric" class="modal" >
-</div>
+<dialog id="modalGeneric" class="modal">
+  <h3 id="modalTitle"></h3>
+  <div id="modalBody"></div>
+  <div class="modal-buttons">
+    <button id="modalCloseBtn_OK">OK</button>
+  </div>
+</dialog>
     
 
 <script>
     // var $form = $('.trackformchanges');
-    var $forms = document.getElementById("CEForm").querySelectorAll(":scope input");
-    var thisRecNum = $('#RecPK').val();
-    var ctdtID = $('#{{frmMain.CountDate.id_for_label}}');
-    var orig_ctdt = ctdtID.val()
-    var mtlnmID = $('#{{frmMain.Material.id_for_label}}');
-    var orig_matl = mtlnmID.val()
-    var initialState;
+    var forms = document.getElementById("CEForm").querySelectorAll(":scope input");
+    const thisRecNum = document.getElementById("RecPK").value;
+    const ctdtID = document.getElementById("{{frmMain.CountDate.id}}");
+    const orig_ctdt = ctdtID.value;
+    const mtlnmID = document.getElementById("{{frmMain.Material.id}}");
+    const orig_matl = mtlnmID.value;
+    let initialState;
     // set up MatlMap for verifying if an entered Material # is valid
     var MatlMap = new Map(
     [
@@ -281,7 +286,7 @@ button:focus {
 
         sCE();  // show calculated value of CTD_QTY
 
-        initialState = serialize($forms);
+        initialState = serialize(forms);
 
         }
 
@@ -289,7 +294,7 @@ button:focus {
         document.getElementById("wait_spinner").style.display = "block";
         }
 
-    document.getElementById("{{frmMain.CTD_QTY_Expr.id_for_label}}").addEventListener("onfocus",
+    document.getElementById("{{frmMain.CTD_QTY_Expr.id}}").addEventListener("onfocus",
         function(){ SkipCountIfLocationOnly(); });
 
     // later, duplicate this for closeform (see document.body.onbeforeunload)
@@ -299,17 +304,16 @@ button:focus {
         });
 
     // I don't need to check for CtDt or Material exists since button is disabled if these are missing
-    $("#SchedCount").on("click",
+    document.getElementById("SchedCount").addEventListener("click",
         function() {
             if (!isValid_Date()) {return;}
             else {
-                dVal = (new Date(ctdtID.val())).toISOString().substring(0,10)
+                dVal = (new Date(ctdtID.value)).toISOString().substring(0,10)
             }
 
             R = 0   // not needed, since R=0 is hardcoded in the url below.  But this is good for documentation
-            // newRec = "{#% url 'CountScheduleForm' 0 'passedCountDate' 'passedMatlNum' %}"    {# look up proper url_for syntax #}
-            newRec = "/CountScheduleForm/0/passedCountDate/passedMatlNum"
-            newRec = newRec.replace("/passedMatlNum","/"+mtlnmID.val());
+            // newRec = "{{ url_for('CountScheduleForm', recNum=0, reqDate='passedCountDate', MatlNum='passedMatlNum') }}"
+            newRec = newRec.replace("/passedMatlNum","/"+mtlnmID.value);
             newRec = newRec.replace("/passedCountDate","/"+dVal);
             window.open(newRec,'_blank')
         });
@@ -320,12 +324,12 @@ button:focus {
 
     function sCE(){ 
         const EvalExprID = 'EvalExpr';
-        if (document.getElementById("{{frmMain.LocationOnly.id_for_label}}").disabled) {
+        if (document.getElementById("{{frmMain.LocationOnly.id}}").disabled) {
             document.getElementById(EvalExprID).innerHTML = "";
-        } else if (document.getElementById("{{frmMain.LocationOnly.id_for_label}}").checked) {
+        } else if (document.getElementById("{{frmMain.LocationOnly.id}}").checked) {
             document.getElementById(EvalExprID).innerHTML = "<b>LOCATION ONLY</b>";
         } else {
-            showCountExpr('{{frmMain.CTD_QTY_Expr.id_for_label}}', EvalExprID); 
+            showCountExpr('{{frmMain.CTD_QTY_Expr.id}}', EvalExprID); 
         }
     };
 
@@ -340,12 +344,12 @@ button:focus {
     function isValid_Date() {
         let dVal;
 
-        if (ctdtID.val().trim()=="") {
+        if (ctdtID.value.trim()=="") {
             return false;
         }
 
         try {
-            dVal = new Date(ctdtID.val())
+            dVal = new Date(ctdtID.value)
         }
         catch {
             return false;
@@ -353,10 +357,10 @@ button:focus {
         return true;
     }
     function isValid_Material() {
-        if (mtlnmID.val().trim()=="") {
+        if (mtlnmID.value.trim()=="") {
                 return false;
         } else {
-            return MatlMap.has(mtlnmID.val());
+            return MatlMap.has(mtlnmID.value);
         }
 
     }
@@ -365,7 +369,7 @@ button:focus {
         let dVal;
 
         if (!isValid_Date()) {
-            alertBox("Invalid Date", ctdtID.val() + " is not a valid date");
+            alertBox("Invalid Date", ctdtID.value + " is not a valid date");
             ctdtID.focus();
             return;
         }
@@ -374,91 +378,111 @@ button:focus {
         }
         // if (typeof(dVal) == 'string') { dVal = new Date(dVal) };
         // dVal =  dtstr(dt = dVal, fmt = "YYYY-MM-DD")
-        ctdtID.val(dVal)
+        ctdtID.value = dVal
 
         if (!isValid_Material()) {
-            if (mtlnmID.val() != "") { alertBox("Invalid Material", mtlnmID.val() + " is not a valid Material number"); }
+            if (mtlnmID.value != "") { alertBox("Invalid Material", mtlnmID.value + " is not a valid Material number"); }
             mtlnmID.focus();
             return;
         } 
 
-        newRec = "{#% url 'CountEntryForm' 9999 'passedCountDate' 'matl' %}"; #}
-        newRec = "/CountEntryForm/9999/passedCountDate/matl"
-        R = Number.parseInt( document.getElementById('{{frmMain.id.id_for_label}}').value );
+        newRec = "{{ url_for('CountEntryForm', recNum=9999, reqDate='passedCountDate', matlNum='matl') }}";
+        R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
         if ( isNaN(R) ) { R = 0 };
         newRec = newRec.replace("/9999","/"+R);
         newRec = newRec.replace("passedCountDate",dVal);
-        mNum="None"; if (mtlnmID.val() != "") {mNum = MatlMap.get(mtlnmID.val())};
+        mNum="None"; if (mtlnmID.value != "") {mNum = MatlMap.get(mtlnmID.value)};
         newRec = newRec.replace("/matl","/"+mNum);
         window.location = newRec;
     };
     function loadCountEntryRec(goDir) {
-        R = Number.parseInt( document.getElementById('{{frmMain.id.id_for_label}}').value );
+        R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
         if ( isNaN(R) ) { R = 0 };
-        newRec = "{#% url 'CountEntryFormGo' 0 'gotoCommand' %}" #}
-        newRec = "/CountEntryFormGo/0/gotoCommand"
+        newRec = "{{ url_for('CountEntryFormGo', recNum=0, gotoCommand='gotoCommand') }}"
         newRec = newRec.replace("/0","/"+R);
         newRec = newRec.replace("/gotoCommand","/"+goDir);
         window.location = newRec;
     };
 
     function SkipCountIfLocationOnly() {
-        if ($("#{{frmMain.LocationOnly.id_for_label}}").val()) {
-            $("#{{frmMain.CTD_QTY_Expr.id_for_label}}").attr('tabindex','-1');
+        const locationOnly = document.getElementById("{{ frmMain.LocationOnly.id }}");
+        const evalExpr = document.getElementById("EvalExpr");
+        const ctdQtyExpr = document.getElementById("{{ frmMain.CTD_QTY_Expr.id }}");
+        if (locationOnly.value) {
+            ctdQtyExpr.setAttribute('tabindex', '-1');
+
         } else {
-            $("#{{frmMain.CTD_QTY_Expr.id_for_label}}").removeAttr('tabindex');
+            ctdQtyExpr.removeAttribute('tabindex');
         }
         sCE();
     };
 
     function SubmMainFm() {
-        let formGood = true
+        let formGood = true;
 
-        if (!($("#{{ frmMain.CountDate.id_for_label }}").val())) {
-            formGood = false
+        const countDate = document.getElementById("{{ frmMain.CountDate.id }}");
+        const material = document.getElementById("{{ frmMain.Material.id }}");
+        const counter = document.getElementById("{{ frmMain.Counter.id }}");
+        const location = document.getElementById("{{ frmMain.LOCATION.id }}");
+        const locationOnly = document.getElementById("{{ frmMain.LocationOnly.id }}");
+        const evalExpr = document.getElementById("EvalExpr");
+        const ctdQtyExpr = document.getElementById("{{ frmMain.CTD_QTY_Expr.id }}");
+        const form = document.getElementById("CEForm");
+
+        if (!countDate.value) {
+            formGood = false;
             alertBox("Enter Count Date", "Please enter a Count Date");
-            $("#{{ frmMain.CountDate.id_for_label }}").focus();
-        } else if (!($("#{{ frmMain.Material.id_for_label }}").val())) {
-            formGood = false
+            countDate.focus();
+
+        } else if (!material.value) {
+            formGood = false;
             alertBox("Enter Material", "Please enter a Material #");
-            $("#{{ frmMain.Material.id_for_label }}").focus();
-        } else if (!($("#{{ frmMain.Counter.id_for_label }}").val())) {
-            formGood = false
+            material.focus();
+
+        } else if (!counter.value) {
+            formGood = false;
             alertBox("Enter Counter", "Please enter the Counter");
-            $("#{{ frmMain.Counter.id_for_label }}").focus();
-        } else if (!($("#{{ frmMain.LOCATION.id_for_label }}").val())) {
-            formGood = false
+            counter.focus();
+
+        } else if (!location.value) {
+            formGood = false;
             alertBox("Enter LOCATION", "Please enter a LOCATION");
-            $("#{{ frmMain.LOCATION.id_for_label }}").focus();
-        } else if (!($("#{{ frmMain.LocationOnly.id_for_label }}").prop("checked"))) {     // if not LocationOnly
-            if (isNaN(parseFloat($("#EvalExpr").html().slice(2)))) {                // if CTD QTY isNaN
-                formGood = false
+            location.focus();
+
+        } else if (!locationOnly.checked) { // if not LocationOnly
+            const val = parseFloat(evalExpr.innerHTML.slice(2));
+            if (isNaN(val)) {
+                formGood = false;
                 alertBox("Enter Valid Quantity", "Please enter a Valid Quantity or LocationOnly");
-                $("#{{ frmMain.CTD_QTY_Expr.id_for_label }}").focus();
+                ctdQtyExpr.focus();
             }
         }
 
         if (formGood) {
-            $("#CEForm").submit()
+            form.submit();
         }
     }
-
 //******************
 
     function alertBox(titl, msg) {
-        $("#modalGeneric").dialog("option","title",titl);
-        document.getElementById("modalGeneric").innerHTML = msg
+    const modal = document.getElementById("modalGeneric");
+    
+    // Set the title and message content
+    document.getElementById("modalTitle").textContent = titl;
+    document.getElementById("modalBody").innerHTML = msg;
 
-        $("#modalGeneric").dialog("option","buttons", 
-            { 
-                "OK" : function() {
-                    $(this).dialog("close"); }
-            } );
-        $("#modalGeneric").dialog("open");
+    // Set up the close button event listener
+    document.getElementById("modalCloseBtn_OK").onclick = function() {
+        modal.close(); // Native method to close the dialog
+    };
+
+    // Open the modal natively as a modal backdrop overlay
+    modal.showModal(); 
     }
 
+//RESTARTHERERESTARTHERE
     function isFormChanged() {
-        currState = serialize($forms);
+        currState = serialize(forms);
         return !(initialState === currState);
     };
 
