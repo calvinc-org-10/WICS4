@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from flask_login import login_required, current_user
 from flask import (
@@ -13,6 +13,23 @@ from calvincTools.utils import checkTemplate_and_render
 from .CountEntryForm import CountEntryForm, RelatedMaterialInfo, RelatedScheduleInfo
 from models import ActualCounts, MaterialList, WhsePartTypes
 
+
+def _coerce_req_date(req_date: object) -> date:
+    """Convert route/request date values into a date object for form/model use."""
+    if isinstance(req_date, datetime):
+        return req_date.date()
+    if isinstance(req_date, date):
+        return req_date
+    if isinstance(req_date, str):
+        cleaned = req_date.strip()
+        if cleaned:
+            for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y"):
+                try:
+                    return datetime.strptime(cleaned, fmt).date()
+                except ValueError:
+                    continue
+    return datetime.today().date()
+
 @login_required
 def fnCountEntryView( 
             recNum = None, MatlNum = None, reqDate = None,
@@ -23,7 +40,7 @@ def fnCountEntryView(
     
     # defauls parms
     if recNum is None: recNum = 0
-    if reqDate is None: reqDate = datetime.today()
+    reqDate = _coerce_req_date(reqDate)
 
     # the string 'None' is not the same as the value None
     if MatlNum=='None' or MatlNum is None: MatlNum=0

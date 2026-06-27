@@ -1,8 +1,3 @@
-last err: entering GPN sent
-http://127.0.0.1:5000/WICS/CountEntryForm?recNum=9999&amp;reqDate=2026-06-27&amp;matlNum=matl
-
-
-
 {% extends "_moveto_cTools/cToolsFormLayout.html" %}
 
 {% block customCSS %}
@@ -259,6 +254,7 @@ button:focus {
     const orig_ctdt = ctdtID.value;
     const mtlnmID = document.getElementById("{{frmMain.Material.id}}");
     const orig_matl = mtlnmID.value;
+    const url_subst_prefix = "/";       // prefix/delimeter of dynamically generated values in url_for() URLs
     let initialState;
     // set up MatlMap for verifying if an entered Material # is valid
     var MatlMap = new Map(
@@ -268,12 +264,6 @@ button:focus {
     {% endfor %}
     ]    )
 
-
-    // testing
-    document.addEventListener("DOMContentLoaded", () => {
-        // Your code goes here
-        alert("DOM is fully loaded!");
-    });
 
     // move to common
     function serialize(elmnts) {
@@ -339,7 +329,11 @@ button:focus {
             }
 
             R = 0   // not needed, since R=0 is hardcoded in the url below.  But this is good for documentation
-            {# newRec = "{{ url_for('WICS.CountScheduleForm', recNum=0, reqDate='passedCountDate', MatlNum='passedMatlNum') }}" #}
+            {# 
+            newRec = "{{ url_for('WICS.CountScheduleForm', recNum=0, reqDate='passedCountDate', MatlNum='passedMatlNum') }}" 
+            newRec = newRec.replace(url_subst_prefix+"passedMatlNum",url_subst_prefix+mtlnmID.value);
+            newRec = newRec.replace(url_subst_prefix+"passedCountDate",url_subst_prefix+dVal);
+            #}
             newRec = "CountScheduleForm/0/passedCountDate/passedMatlNum"        // temp until CountScheduleForm is built
             newRec = newRec.replace("/passedMatlNum","/"+mtlnmID.value);
             newRec = newRec.replace("/passedCountDate","/"+dVal);
@@ -414,21 +408,21 @@ button:focus {
             return;
         } 
 
-        newRec = "{{ url_for('WICS.CountEntryForm', recNum=9999, reqDate='passedCountDate', matlNum='matl') }}";
+        newRec = "{{ url_for('WICS.CountEntryForm_ChgKey', recNum=9999, reqDate='passedCountDate', MatlNum='matl') }}";
         R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
         if ( isNaN(R) ) { R = 0 };
-        newRec = newRec.replace("/9999","/"+R);
-        newRec = newRec.replace("passedCountDate",dVal);
+        newRec = newRec.replace(url_subst_prefix+"9999",url_subst_prefix+R);
+        newRec = newRec.replace(url_subst_prefix+"passedCountDate",url_subst_prefix+dVal);
         mNum="None"; if (mtlnmID.value != "") {mNum = MatlMap.get(mtlnmID.value)};
-        newRec = newRec.replace("/matl","/"+mNum);
+        newRec = newRec.replace(url_subst_prefix+"matl",url_subst_prefix+mNum);
         window.location = newRec;
     };
     function loadCountEntryRec(goDir) {
         R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
         if ( isNaN(R) ) { R = 0 };
-        newRec = "{{ url_for('WICS.CountEntryFormGo', recNum=0, gotoCommand='gotoCommand') }}"
-        newRec = newRec.replace("/0","/"+R);
-        newRec = newRec.replace("/gotoCommand","/"+goDir);
+        newRec = "{{ url_for('WICS.CountEntryFormGo_Command', recNum=0, gotoCommand='gotoCommand') }}"
+        newRec = newRec.replace(url_subst_prefix+"0",url_subst_prefix+R);
+        newRec = newRec.replace(url_subst_prefix+"gotoCommand",url_subst_prefix+goDir);
         window.location = newRec;
     };
 
