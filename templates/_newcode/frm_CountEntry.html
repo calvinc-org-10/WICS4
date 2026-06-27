@@ -1,3 +1,8 @@
+last err: entering GPN sent
+http://127.0.0.1:5000/WICS/CountEntryForm?recNum=9999&amp;reqDate=2026-06-27&amp;matlNum=matl
+
+
+
 {% extends "_moveto_cTools/cToolsFormLayout.html" %}
 
 {% block customCSS %}
@@ -49,6 +54,7 @@ button:focus {
     <span class="col-5 bg-secondary text-warning">Count Date, Material, Actual Counter, Location and either LocOnly or Ctd Qty are required before Saving the form</span>
 {% endblock layoutFormFixedTop %}
 
+{% block boddy %}
 {% block formBody %}
     <form id="CEForm" class="trackformchanges" method="post">
         {{ frmMain.hidden_tag() }}
@@ -69,7 +75,7 @@ button:focus {
                 <input list="Material-list"
                     id="{{frmMain.Material.id}}" name="{{frmMain.Material.html_name}}"
                     class="border border-5 border-danger fw-bold"
-                    onfocus="$(this).select();"
+                    onfocus="this.select();"
                     onchange="loadExtraInfo();"
                     value="{{matlchoiceForm.gotoItem}}"
                     required
@@ -78,7 +84,7 @@ button:focus {
                 <span class="bi-caret-down-square"
                     style="position:relative;top:+0px;font-size:20px;left:-30px;"
                     tabindex = "-1"
-                    onclick="$('#{{frmMain.Material.id}}').focus();">
+                    onclick="document.getElementById('{{frmMain.Material.id}}').focus();">
                 </span>
                 {% if not matlchoiceForm.gotoItem %}
                     <!-- Material has no value yet -->
@@ -237,12 +243,13 @@ button:focus {
 
 <dialog id="modalGeneric" class="modal">
   <h3 id="modalTitle"></h3>
-  <div id="modalBody"></div>
-  <div class="modal-buttons">
-    <button id="modalCloseBtn_OK">OK</button>
+  <!-- Target this specifically for the body text -->
+  <div id="modalBody"></div> 
+  <div class="modal-buttons" id="modalButtonsContainer">
+    <!-- Buttons will be dynamically inserted here by the function -->
   </div>
 </dialog>
-    
+
 
 <script>
     // var $form = $('.trackformchanges');
@@ -260,6 +267,23 @@ button:focus {
         ['{{itm.Material_org}}', {{itm.id}}],
     {% endfor %}
     ]    )
+
+
+    // testing
+    document.addEventListener("DOMContentLoaded", () => {
+        // Your code goes here
+        alert("DOM is fully loaded!");
+    });
+
+    // move to common
+    function serialize(elmnts) {
+        let retStr = ''
+        // let obj = {};
+        for (let theelmnt of elmnts) {
+            retStr += theelmnt.name + "='" + theelmnt.value + "';"
+        }
+        return retStr;
+    }
 
 
     // JAVASCRIPT DATES SUCK!!!!!!
@@ -282,7 +306,10 @@ button:focus {
     document.body.onload = function() {
 
         // turn off controls that need the Date and Material first
-        $(".need-Matl-Dt").prop("disabled", !isValid_Date_Material());
+        const vald_dt_matl = !isValid_Date_Material()
+        document.querySelectorAll(".need-Matl-Dt").forEach(element => {
+            element.disabled = !isValid_Date_Material();
+        });
 
         sCE();  // show calculated value of CTD_QTY
 
@@ -312,7 +339,8 @@ button:focus {
             }
 
             R = 0   // not needed, since R=0 is hardcoded in the url below.  But this is good for documentation
-            // newRec = "{{ url_for('CountScheduleForm', recNum=0, reqDate='passedCountDate', MatlNum='passedMatlNum') }}"
+            {# newRec = "{{ url_for('WICS.CountScheduleForm', recNum=0, reqDate='passedCountDate', MatlNum='passedMatlNum') }}" #}
+            newRec = "CountScheduleForm/0/passedCountDate/passedMatlNum"        // temp until CountScheduleForm is built
             newRec = newRec.replace("/passedMatlNum","/"+mtlnmID.value);
             newRec = newRec.replace("/passedCountDate","/"+dVal);
             window.open(newRec,'_blank')
@@ -374,7 +402,7 @@ button:focus {
             return;
         }
         else {
-            dVal = (new Date(ctdtID.val())).toISOString().substring(0,10)
+            dVal = (new Date(ctdtID.value)).toISOString().substring(0,10)
         }
         // if (typeof(dVal) == 'string') { dVal = new Date(dVal) };
         // dVal =  dtstr(dt = dVal, fmt = "YYYY-MM-DD")
@@ -386,7 +414,7 @@ button:focus {
             return;
         } 
 
-        newRec = "{{ url_for('CountEntryForm', recNum=9999, reqDate='passedCountDate', matlNum='matl') }}";
+        newRec = "{{ url_for('WICS.CountEntryForm', recNum=9999, reqDate='passedCountDate', matlNum='matl') }}";
         R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
         if ( isNaN(R) ) { R = 0 };
         newRec = newRec.replace("/9999","/"+R);
@@ -398,7 +426,7 @@ button:focus {
     function loadCountEntryRec(goDir) {
         R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
         if ( isNaN(R) ) { R = 0 };
-        newRec = "{{ url_for('CountEntryFormGo', recNum=0, gotoCommand='gotoCommand') }}"
+        newRec = "{{ url_for('WICS.CountEntryFormGo', recNum=0, gotoCommand='gotoCommand') }}"
         newRec = newRec.replace("/0","/"+R);
         newRec = newRec.replace("/gotoCommand","/"+goDir);
         window.location = newRec;
@@ -464,57 +492,80 @@ button:focus {
     }
 //******************
 
-    function alertBox(titl, msg) {
-    const modal = document.getElementById("modalGeneric");
-    
-    // Set the title and message content
-    document.getElementById("modalTitle").textContent = titl;
-    document.getElementById("modalBody").innerHTML = msg;
+// Get DOM references for dialog box
+const modal = document.getElementById("modalGeneric");
+const modalTitle = document.getElementById("modalTitle");
+const modalBody = document.getElementById("modalBody");
+const modalButtonsContainer = document.getElementById("modalButtonsContainer");
 
-    // Set up the close button event listener
-    document.getElementById("modalCloseBtn_OK").onclick = function() {
-        modal.close(); // Native method to close the dialog
-    };
+function alertBox(titl, msg) {
+    // Set the title and message content
+    modalTitle.textContent = titl;
+    modalBody.innerHTML = msg;
+
+    // Build "OK" Button
+    const OKBtn = document.createElement("button");
+    OKBtn.textContent = "No";
+    OKBtn.addEventListener("click", () => {
+      modal.close(); // Native close method
+    });
+
+    // Append new buttons to container
+    modalButtonsContainer.appendChild(OKBtn);
 
     // Open the modal natively as a modal backdrop overlay
     modal.showModal(); 
-    }
+}
 
-//RESTARTHERERESTARTHERE
     function isFormChanged() {
         currState = serialize(forms);
         return !(initialState === currState);
     };
 
-    function confirmLeave(LeaveProc){
-        if (isFormChanged()) {
-            $("#modalGeneric").dialog("option","title","Leave Record?");
-            document.getElementById("modalGeneric").innerHTML = "This record has changed<br>Do you really want to leave without saving?"
-    
-            $("#modalGeneric").dialog("option","buttons", 
-                { 
-                    "Yes": function() { 
-                        LeaveProc();
-                        $(this).dialog("close"); },
-                    "No" : function() {
-                        $(this).dialog("close"); }
-                } );
-            $("#modalGeneric").dialog("open");
-        } else {
-            LeaveProc();
-        }
-    };
+function confirmLeave(LeaveProc) {
+  if (isFormChanged()) {
+    // 1. Set the Title
+    modalTitle.textContent = "Leave Record?";
 
-    // handle Modal
-    $("#modalGeneric").dialog({
-        autoOpen: false,
-        closeOnEscape: false,
-        modal: true,
-        hide: "puff",
-        position: {
-            my: "top center", at: "top center"
-        }
+    // 2. Set the Body content safely
+    modalBody.innerHTML = "This record has changed<br>Do you really want to leave without saving?";
+
+    // 3. Clear existing dynamic buttons and build new ones
+    modalButtonsContainer.innerHTML = "";
+
+    // Build "Yes" Button
+    const yesBtn = document.createElement("button");
+    yesBtn.textContent = "Yes";
+    yesBtn.addEventListener("click", () => {
+      LeaveProc();
+      modal.close(); // Native close method
     });
+
+    // Build "No" Button
+    const noBtn = document.createElement("button");
+    noBtn.textContent = "No";
+    noBtn.addEventListener("click", () => {
+      modal.close(); // Native close method
+    });
+
+    // Append new buttons to container
+    modalButtonsContainer.appendChild(yesBtn);
+    modalButtonsContainer.appendChild(noBtn);
+
+    // 4. Open the native modal
+    // This replaces .dialog("open") and handles the background overlay automatically
+    modal.showModal(); 
+
+  } else {
+    LeaveProc();
+  }
+}
+
+// Disables closing the modal when pressing the Escape key (mimics closeOnEscape: false)
+modal.addEventListener("cancel", (event) => {
+  event.preventDefault();
+});
+
 
     function YesCloseIt() {
         window.close()
@@ -525,4 +576,4 @@ button:focus {
     }
 
 </script>
-
+{% endblock boddy %}
