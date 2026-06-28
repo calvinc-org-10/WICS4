@@ -420,8 +420,8 @@ button:focus {
     function loadCountEntryRec(goDir) {
         R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
         if ( isNaN(R) ) { R = 0 };
-        newRec = "{{ url_for('WICS.CountEntryFormGo_Command', recNum=0, gotoCommand='gotoCommand') }}"
-        newRec = newRec.replace(url_subst_prefix+"0",url_subst_prefix+R);
+        newRec = "{{ url_for('WICS.CountEntryFormGo_Command', recNum=-1, gotoCommand='gotoCommand') }}"
+        newRec = newRec.replace(url_subst_prefix+"-1",url_subst_prefix+R);
         newRec = newRec.replace(url_subst_prefix+"gotoCommand",url_subst_prefix+goDir);
         window.location = newRec;
     };

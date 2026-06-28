@@ -36,17 +36,17 @@ def define_routes(flskapp):
         )
     WICS_bp.add_url_rule('/CountEntryForm/Go/<int:recNum>',
         view_func=fnCountEntryView,
-        methods=['GET', 'POST'],
+        methods=['GET'],
         endpoint='CountEntryFormGo'
         )
     WICS_bp.add_url_rule('/CountEntryForm/Go/<int:recNum>/<string:gotoCommand>',
         view_func=fnCountEntryView,
-        methods=['GET', 'POST'],
+        methods=['GET'],
         endpoint='CountEntryFormGo_Command'
         )
     WICS_bp.add_url_rule('/CountEntryForm/<int:recNum>/<string:reqDate>/<string:MatlNum>',
         view_func=fnCountEntryView,
-        methods=['GET', 'POST'],
+        methods=['GET'],
         defaults={'gotoCommand':'ChgKey'},
         endpoint='CountEntryForm_ChgKey'
         )
