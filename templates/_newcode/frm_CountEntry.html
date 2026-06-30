@@ -9,6 +9,23 @@ button:focus {
     -moz-box-shadow: 0 0 5px rgba(0, 0, 255, 1);
     border:1px solid rgba(0,0,255, 0.8); 
 }
+
+/* move to common */
+/* Core styles for your dialog box */
+.modal {
+    padding: 20px;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    
+    /* Do NOT set display: block or display: flex here */
+}
+
+/* Optional: Style the backdrop overlay that blocks the screen */
+.modal::backdrop {
+    background-color: rgba(0, 0, 0, 0.5); /* Dim the background */
+}
+
 {% include "_moveto_cTools/proposed-table-CSS.css" %}
 {% endblock %}
 
@@ -66,9 +83,8 @@ button:focus {
             {# <div class="col-2">CycCt ID: {% render_field frmMain.CycCtID tabindex="-1" size="8" %}</div> #}
             <div class="col-1">{{ frmMain.CycCtID(hidden=True) }}</div>
             <div class="col-4">Material:
-                {# {% render_field frmMain.Material onchange="loadExtraInfo()" %}</div> #}
                 <input list="Material-list"
-                    id="{{frmMain.Material.id}}" name="{{frmMain.Material.html_name}}"
+                    id="Material-input-visible" name="Material-input-visible"
                     class="border border-5 border-danger fw-bold"
                     onfocus="this.select();"
                     onchange="loadExtraInfo();"
@@ -79,7 +95,7 @@ button:focus {
                 <span class="bi-caret-down-square"
                     style="position:relative;top:+0px;font-size:20px;left:-30px;"
                     tabindex = "-1"
-                    onclick="document.getElementById('{{frmMain.Material.id}}').focus();">
+                    onclick="document.getElementById('Material-input-visible').focus();">
                 </span>
                 {% if not matlchoiceForm.gotoItem %}
                     <!-- Material has no value yet -->
@@ -252,8 +268,10 @@ button:focus {
     const thisRecNum = document.getElementById("RecPK").value;
     const ctdtID = document.getElementById("{{frmMain.CountDate.id}}");
     const orig_ctdt = ctdtID.value;
-    const mtlnmID = document.getElementById("{{frmMain.Material.id}}");
+    const mtlnmID = document.getElementById("Material-input-visible");
     const orig_matl = mtlnmID.value;
+    const mtlnmbrID = document.getElementById("{{frmMain.Material_id.id}}");
+    const orig_matl_id = mtlnmbrID.value;
     const url_subst_prefix = "/";       // prefix/delimeter of dynamically generated values in url_for() URLs
     let initialState;
     // set up MatlMap for verifying if an entered Material # is valid
@@ -335,7 +353,7 @@ button:focus {
             newRec = newRec.replace(url_subst_prefix+"passedCountDate",url_subst_prefix+dVal);
             #}
             newRec = "CountScheduleForm/0/passedCountDate/passedMatlNum"        // temp until CountScheduleForm is built
-            newRec = newRec.replace("/passedMatlNum","/"+mtlnmID.value);
+            newRec = newRec.replace("/passedMatlNum","/"+mtlnmbrID.value);
             newRec = newRec.replace("/passedCountDate","/"+dVal);
             window.open(newRec,'_blank')
         });
@@ -443,7 +461,7 @@ button:focus {
         let formGood = true;
 
         const countDate = document.getElementById("{{ frmMain.CountDate.id }}");
-        const material = document.getElementById("{{ frmMain.Material.id }}");
+        const material = document.getElementById("Material-input-visible");
         const counter = document.getElementById("{{ frmMain.Counter.id }}");
         const location = document.getElementById("{{ frmMain.LOCATION.id }}");
         const locationOnly = document.getElementById("{{ frmMain.LocationOnly.id }}");
@@ -497,9 +515,12 @@ function alertBox(titl, msg) {
     modalTitle.textContent = titl;
     modalBody.innerHTML = msg;
 
+    // 3. Clear existing dynamic buttons and build new ones
+    modalButtonsContainer.innerHTML = "";
+
     // Build "OK" Button
     const OKBtn = document.createElement("button");
-    OKBtn.textContent = "No";
+    OKBtn.textContent = "OK";
     OKBtn.addEventListener("click", () => {
       modal.close(); // Native close method
     });

@@ -10,7 +10,7 @@ class CountEntryForm(FlaskForm):
     id = forms.IntegerField()
     CountDate = forms.DateField(validators=[DataRequired()])
     CycCtID = forms.StringField()
-    Material = forms.StringField(validators=[DataRequired()])
+    # Material = forms.StringField(validators=[DataRequired()])
         # Material is handled this way because of the way it's done in the html.
         # later, create a DropdownText widget??
     Material_id = forms.HiddenField()

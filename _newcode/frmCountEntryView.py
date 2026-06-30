@@ -13,15 +13,17 @@ from calvincTools.utils import checkTemplate_and_render
 from .CountEntryForm import CountEntryForm, RelatedMaterialInfo, RelatedScheduleInfo
 from models import ActualCounts, MaterialList, WhsePartTypes
 
+from database import app_db
 
-def _coerce_req_date(req_date: object) -> date:
+
+def _coerce_date(date_to_coerce: object) -> date:
     """Convert route/request date values into a date object for form/model use."""
-    if isinstance(req_date, datetime):
-        return req_date.date()
-    if isinstance(req_date, date):
-        return req_date
-    if isinstance(req_date, str):
-        cleaned = req_date.strip()
+    if isinstance(date_to_coerce, datetime):
+        return date_to_coerce.date()
+    if isinstance(date_to_coerce, date):
+        return date_to_coerce
+    if isinstance(date_to_coerce, str):
+        cleaned = date_to_coerce.strip()
         if cleaned:
             for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y"):
                 try:
@@ -36,11 +38,9 @@ def fnCountEntryView(
             gotoCommand = None
             ):
 
-    req = request
-    
     # defauls parms
     if recNum is None: recNum = 0
-    reqDate = _coerce_req_date(reqDate)
+    reqDate = _coerce_date(reqDate)
 
     # the string 'None' is not the same as the value None
     if MatlNum=='None' or MatlNum is None: MatlNum=0
@@ -48,6 +48,8 @@ def fnCountEntryView(
 
     FormMain = CountEntryForm
     FormSubs = [S for S in [RelatedMaterialInfo, RelatedScheduleInfo]]
+    matlSubIndx = 0
+    schdSubIndx = 1
 
     modelMain = FormMain.Meta.model
     modelSubs = [S.Meta.model for S in FormSubs]
@@ -64,14 +66,14 @@ def fnCountEntryView(
     }
     initialobj = {
         'main': modelMain(**initialvals['main']),
-        'matl': modelSubs[0](**initialvals['matl']),
-        'schedule': modelSubs[1](**initialvals['schedule']),
+        'matl': modelSubs[matlSubIndx](**initialvals['matl']),
+        'schedule': modelSubs[schdSubIndx](**initialvals['schedule']),
     }
 
     # process main form
     mainFm = FormMain(prefix=prefixvals['main'], obj=initialobj['main'])   # Note that you don’t have to pass request.form to Flask-WTF; it will load automatically. And the convenient validate_on_submit will check if it is a POST request and if it is valid.
-    matlSubFm = FormSubs[0](prefix=prefixvals['matl'], obj=initialobj['matl'])
-    schedSet = FormSubs[1](prefix=prefixvals['schedule'], obj=initialobj['schedule'])
+    matlSubFm = FormSubs[matlSubIndx](prefix=prefixvals['matl'], obj=initialobj['matl'])
+    schedSet = FormSubs[schdSubIndx](prefix=prefixvals['schedule'], obj=initialobj['schedule'])
 
     changes_saved = {
         'main': False,
@@ -84,22 +86,19 @@ def fnCountEntryView(
         'schedule': []
         }
 
-    if req.method == 'POST' and mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
+    if request.method == 'POST' and mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
         formRec = modelMain()
         mainFm.populate_obj(formRec)
         recNum = int(getattr(formRec, 'id', 0))
-        try:
-            currRec = modelMain.query.get(recNum)
-        except:
-            currRec = modelMain()
-        matlformRec = modelSubs[0]()
+        currRec = app_db.session.get(modelMain, recNum) or modelMain()
+
+        matlformRec = modelSubs[matlSubIndx]()
         matlSubFm.populate_obj(matlformRec)
         matlRecNum = int(getattr(matlformRec, 'id', 0))
-        try:
-            matlRec = modelSubs[0].query.get(matlRecNum)
-        except:
-            matlRec = modelSubs[0]()
-        #schedRecs = modelSubs[1].objects.filter(org=_userorg, CountDate=req.POST[prefixvals['main']+'-CountDate'], Material=matlRec)
+        model_class = modelSubs[matlSubIndx]
+        matlRec = app_db.session.get(model_class, matlRecNum) or model_class()
+
+        #schedRecs = modelSubs[schdSubIndx].objects.filter(org=_userorg, CountDate=req.POST[prefixvals['main']+'-CountDate'], Material=matlRec)
 
         # what's changed in main form?
         chgd_dat['main'] = [
@@ -131,38 +130,27 @@ def fnCountEntryView(
             # # MaterialID = getattr(matlRec, 'pk', None)
 
             # NOTE: If you want the cleanest flow, do a redirect after POST and rebuild the forms on the following GET. That avoids carrying any POST state forward at all.
-            mainFm = FormMain(formdata=None, obj=initialobj["main"], prefix=prefixvals["main"])
-            matlSubFm = FormSubs[0](formdata=None, obj=initialobj["matl"], prefix=prefixvals["matl"])
-            schedFm = FormSubs[1](formdata=None, obj=initialobj["schedule"], prefix=prefixvals["schedule"])
+            return redirect(url_for('WICS.CountEntryForm'))
+            # mainFm = FormMain(formdata=None, obj=initialobj["main"], prefix=prefixvals["main"])
+            # matlSubFm = FormSubs[matlSubIndx](formdata=None, obj=initialobj["matl"], prefix=prefixvals["matl"])
+            # schedFm = FormSubs[schdSubIndx](formdata=None, obj=initialobj["schedule"], prefix=prefixvals["schedule"])
 
-            # if currRec: 
-            #     mainFm = FormMain(instance=currRec, prefix=prefixvals['main'])
-            # else:       
-            #     mainFm = FormMain(initial=initialvals['main'],  prefix=prefixvals['main'])
-            # if matlRec:
-            #     matlSubFm = FormSubs[0](matlRec.pk, instance=matlRec, prefix=prefixvals['matl'])
-            # else:
-            #     matlSubFm = FormSubs[0](None, initial=initialvals['matl'], prefix=prefixvals['matl'])
     else:   ## rec.method != 'POST'
         currRec = modelMain(**initialvals['main'])
-        matlRec = modelSubs[0]()
+        matlRec = modelSubs[matlSubIndx](**initialvals['matl'])
 
         # TODO: add protection against no records
         recFirstPK = getattr(modelMain.query.order_by(modelMain.id).first(), 'id', 0)
         recLastPK = getattr(modelMain.query.order_by(modelMain.id.desc()).first(), 'id', 0)
         
-        if gotoCommand == 'New':
+        if gotoCommand is None:
+            pass
+        elif gotoCommand == 'New':
             recNum = 0
-        if gotoCommand == 'First':
-            try:
-                recNum = recFirstPK
-            except:
-                recNum = 0
+        elif gotoCommand == 'First':
+            recNum = recFirstPK or 0
         elif gotoCommand == 'Last':
-            try:
-                recNum = recLastPK
-            except:
-                recNum = 0
+            recNum = recLastPK or 0
         elif gotoCommand == 'Prev':
             try:
                 if recNum <= 0:
@@ -171,7 +159,7 @@ def fnCountEntryView(
                     recNum = recFirstPK
                 else:
                     recNum = getattr(modelMain.query.filter(modelMain.id < recNum).order_by(modelMain.id.desc()).first(), 'id', 0)
-            except:
+            except Exception:
                 recNum = 0
         elif gotoCommand == 'Next':
             try:
@@ -181,38 +169,38 @@ def fnCountEntryView(
                     recNum = recLastPK
                 else:
                     recNum = getattr(modelMain.query.filter(modelMain.id > recNum).order_by(modelMain.id).first(), 'id', 0)
-            except:
+            except Exception:
                 recNum = 0
-        else:
+        elif gotoCommand == 'ChgKey':
+            # if currRec:
+            #     currRec.CountDate = reqDate
+            #     matlRec = modelSubs[matlSubIndx].query.get(MatlNum)
+            #     currRec.Material_id = MatlNum
+            #     currRec.Material = matlRec
             pass
-
-        if recNum:
-            currRec = modelMain.query.get(recNum)
-            matlRec = getattr(currRec, 'Material', None)  # subject to change
         else:
-            currRec = modelMain(**initialvals['main'])
-            matlRec = modelSubs[0](**initialvals['matl'])
-        #endif recNum
+            raise ValueError(f"Invalid gotoCommand: {gotoCommand}")
+        # endif gotoCommand
 
-        if gotoCommand == 'ChgKey':
-            if currRec:
-                currRec.CountDate = reqDate
-                matlRec = modelSubs[0].query.get(MatlNum)
-                currRec.Material_id = MatlNum
-                currRec.Material = matlRec
+        currRec = app_db.session.get(modelMain, recNum) or modelMain()
+
+        if MatlNum != 0 and MatlNum != currRec.Material_id:
+            currRec.Material_id = MatlNum
+        model_class = modelSubs[matlSubIndx]
+        matlRec = app_db.session.get(model_class, MatlNum) or model_class()
 
         # at this point, currRec and matlRec s/b correct
-
         if currRec: 
             mainFm = FormMain(formdata=None, obj=currRec, prefix=prefixvals['main'])
         else:       
             mainFm = FormMain(formdata=None, obj=initialvals['main'],  prefix=prefixvals['main'])
         # I know this is broken now. I'll get around to it. I need to rethink the flow of how the subforms are built and populated. I want to be able to build the subforms with the main form, so that they can be displayed together, and then have them populate and save separately. I also need to think about how to handle the case where there is no material record, or no schedule record, and how to handle the case where there are multiple schedule records for a given date and material.
+        # I think I fixed it, but I need to test it. I also need to think about how to handle the case where there is no material record, or no schedule record, and how to handle the case where there are multiple schedule records for a given date and material.
         if matlRec:
-            matlSubFm = FormSubs[0](formata=None, obj=matlRec, prefix=prefixvals['matl'])
+            matlSubFm = FormSubs[matlSubIndx](formata=None, obj=matlRec, prefix=prefixvals['matl'])
             matlRecNum = matlRec.id
         else:
-            matlSubFm = FormSubs[0](formdata=None, obj=initialvals['matl'], prefix=prefixvals['matl'])
+            matlSubFm = FormSubs[matlSubIndx](formdata=None, obj=initialvals['matl'], prefix=prefixvals['matl'])
             matlRecNum = 0
     #endif rec.method == 'POST'
 
@@ -228,44 +216,44 @@ def fnCountEntryView(
 
     # if currRec:
     #     getDate = currRec.CountDate
-    #     if matlRec and modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
-    #         schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
+    #     if matlRec and modelSubs[schdSubIndx].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
+    #         schedinfo = modelSubs[schdSubIndx].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
     #     else:
-    #         schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    #         schedinfo = modelSubs[schdSubIndx].objects.using(dbUsing).none()
     # elif (MatlNum!=0) and (gotoCommand==None):
     #     # review and clean up this block!
     #     if MatlNum != 0:
     #         # fill in MatlInfo and CountSchedInfo
     #         if recNum > 0: getDate = currRec.CountDate 
     #         else: getDate = reqDate
-    #         if modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
-    #             schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
+    #         if modelSubs[schdSubIndx].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
+    #             schedinfo = modelSubs[schdSubIndx].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
     #         else:
-    #             schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    #             schedinfo = modelSubs[schdSubIndx].objects.using(dbUsing).none()
     #     elif recNum > 0:
     #         # ??????????? shouldn't this already be handled?  Think about it...
     #         # fill in MatlInfo and CountSchedInfo
     #         getDate = currRec.CountDate
-    #         if modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
-    #             schedinfo = modelSubs[1].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
+    #         if modelSubs[schdSubIndx].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
+    #             schedinfo = modelSubs[schdSubIndx].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec)[0]  # filter rather than get, since a scheduled count may not exist, or multiple may exist (shouldn't but ...)
     #         else:
-    #             schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    #             schedinfo = modelSubs[schdSubIndx].objects.using(dbUsing).none()
     # else: 
-    #     schedinfo = modelSubs[1].objects.using(dbUsing).none()
+    #     schedinfo = modelSubs[schdSubIndx].objects.using(dbUsing).none()
     # #endif currRec
 
     # schedule info for this material and date
     schedinfo = None
     if currRec and matlRec:
         getDate = currRec.CountDate
-        schedinfo = modelSubs[1].query.filter(modelSubs[1].CountDate==getDate, modelSubs[1].Material_id==matlRec.id).first()
+        schedinfo = modelSubs[schdSubIndx].query.filter(modelSubs[schdSubIndx].CountDate==getDate, modelSubs[schdSubIndx].Material_id==matlRec.id).first()
     else:
         schedinfo = None    
     # endif currRec and matlRec
     if not schedinfo: 
-        schedFm = FormSubs[1](formdata=None, obj=initialvals['schedule'], prefix=prefixvals['schedule'])
+        schedFm = FormSubs[schdSubIndx](formdata=None, obj=initialvals['schedule'], prefix=prefixvals['schedule'])
     else: 
-        schedFm = FormSubs[1](formdata=None, obj=schedinfo, prefix=prefixvals['schedule'])
+        schedFm = FormSubs[schdSubIndx](formdata=None, obj=schedinfo, prefix=prefixvals['schedule'])
     # endif schedinfo
 
     # CountEntryForm MaterialList dropdown
