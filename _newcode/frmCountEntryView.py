@@ -136,8 +136,11 @@ def fnCountEntryView(
             # schedFm = FormSubs[schdSubIndx](formdata=None, obj=initialobj["schedule"], prefix=prefixvals["schedule"])
 
     else:   ## rec.method != 'POST'
-        currRec = modelMain(**initialvals['main'])
-        matlRec = modelSubs[matlSubIndx](**initialvals['matl'])
+        # are the two lines below necessary?  AI autosuggest think they are, but I need to test it.  They are needed to populate the forms with the correct data when the page is first loaded, or when a navigation button is clicked.
+        # currRec = modelMain(**initialvals['main'])
+        # matlRec = modelSubs[matlSubIndx](**initialvals['matl'])
+        currRec = initialobj['main']
+        matlRec = initialobj['matl']
 
         # TODO: add protection against no records
         recFirstPK = getattr(modelMain.query.order_by(modelMain.id).first(), 'id', 0)
@@ -182,12 +185,12 @@ def fnCountEntryView(
             raise ValueError(f"Invalid gotoCommand: {gotoCommand}")
         # endif gotoCommand
 
-        currRec = app_db.session.get(modelMain, recNum) or modelMain()
+        currRec = app_db.session.get(modelMain, recNum) or initialobj['main']
 
         if MatlNum != 0 and MatlNum != currRec.Material_id:
             currRec.Material_id = MatlNum
         model_class = modelSubs[matlSubIndx]
-        matlRec = app_db.session.get(model_class, MatlNum) or model_class()
+        matlRec = app_db.session.get(model_class, MatlNum) or initialobj['matl']
 
         # at this point, currRec and matlRec s/b correct
         if currRec: 

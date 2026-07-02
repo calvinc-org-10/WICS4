@@ -61,27 +61,28 @@ button:focus {
     {% endif %}
 {% endblock %}
     <hr>
-{% block layoutFormFixedTop %}
-    {{ recNum }} / {{ frmMain.id.value }}
-    <span class="col-5 bg-secondary text-warning">Count Date, Material, Actual Counter, Location and either LocOnly or Ctd Qty are required before Saving the form</span>
-{% endblock layoutFormFixedTop %}
 
 {% block boddy %}
+{% block layoutFormFixedTop %}
+    -{{ recNum }}- / -{{ frmMain.id.value }}-
+    <span class="col-5 bg-secondary text-warning">Count Date, Material, Actual Counter, Location and either LocOnly or Ctd Qty are required before Saving the form</span>
+{% endblock layoutFormFixedTop %}
 {% block formBody %}
     <form id="CEForm" class="trackformchanges" method="post">
         {{ frmMain.hidden_tag() }}
+        {{ frmMain.id(type='hidden') }}
          <!-- form header -->
         {% if frmMain.errors %}{{ frmMain.errors }}{% endif %}
-        {{ frmMain.id }}
-        <input type="hidden" id="RecPK" name="RecPK" value={{ recNum }} required></input>
+        {{ frmMain.id.value }}
         <!-- main part of form -->
         <!-- put initial focus on Material and/or init CountDate to today(local), skip CycCtID -->
         <!-- div class="container-fluid m-1" -->
         <div class="container m-1">
             <div class="row g-0">
-            <div class="col-3">Count Dt: {{ frmMain.CountDate(type="date", class="border border-5 border-danger fw-bold", style="width:10em;", autofocus=True, onchange="loadExtraInfo();", required=True) }}</div>
-            {# <div class="col-2">CycCt ID: {% render_field frmMain.CycCtID tabindex="-1" size="8" %}</div> #}
-            <div class="col-1">{{ frmMain.CycCtID(hidden=True) }}</div>
+            <div class="col-3"> test - {{ frmMain.CountDate.value }}
+                Count Dt: {{ frmMain.CountDate(type="date", class="border border-5 border-danger fw-bold", style="width:10em;", autofocus=True, onchange="loadExtraInfo();", required=True) }}
+            </div>
+            {# <div class="col-1">{{ frmMain.CycCtID(hidden=True) }}</div> #}
             <div class="col-4">Material:
                 <input list="Material-list"
                     id="Material-input-visible" name="Material-input-visible"
@@ -252,11 +253,11 @@ button:focus {
     </div>
 {% endblock layoutButtons %}
 
-<dialog id="modalGeneric" class="modal">
+<dialog id="modalGeneric" class="p-4 border-0 rounded shadow">
   <h3 id="modalTitle"></h3>
   <!-- Target this specifically for the body text -->
-  <div id="modalBody"></div> 
-  <div class="modal-buttons" id="modalButtonsContainer">
+  <div id="modalBody" class="my-3"></div> 
+  <div id="modalButtonsContainer" class="d-flex justify-content-end gap-2">
     <!-- Buttons will be dynamically inserted here by the function -->
   </div>
 </dialog>
@@ -265,7 +266,7 @@ button:focus {
 <script>
     // var $form = $('.trackformchanges');
     var forms = document.getElementById("CEForm").querySelectorAll(":scope input");
-    const thisRecNum = document.getElementById("RecPK").value;
+    const thisRecNum = {{ frmMain.id.value or 0 }};
     const ctdtID = document.getElementById("{{frmMain.CountDate.id}}");
     const orig_ctdt = ctdtID.value;
     const mtlnmID = document.getElementById("Material-input-visible");
