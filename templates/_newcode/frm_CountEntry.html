@@ -146,7 +146,7 @@ button:focus {
         </div>
         <hr>
         <div class="row g-0">
-            {{ frmMatlInfo.id.value }}
+            id = {{ frmMatlInfo.id.value }}, MatlPK = {{ MatlNum }}
             {{ frmMatlInfo.id.value | default('---', True) }}
             <input type="hidden" id="MatlPK" name="MatlPK" value="{{ frmMatlInfo.id.value }}" required></input>     {# to go away #}
             {{ frmMatlInfo.id }}    {# hidden field #}
