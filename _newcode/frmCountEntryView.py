@@ -1,3 +1,4 @@
+from typing import Dict, Any, List
 from datetime import datetime, date
 
 from flask_login import login_required, current_user
@@ -34,9 +35,9 @@ def _coerce_date(date_to_coerce: object) -> date:
 
 @login_required
 def fnCountEntryView( 
-            recNum = None, MatlNum = None, reqDate = None,
-            gotoCommand = None
-            ):
+        recNum = None, MatlNum = None, reqDate = None,
+        gotoCommand = None
+        ):
 
     # defauls parms
     if recNum is None: recNum = 0
@@ -75,7 +76,7 @@ def fnCountEntryView(
     matlSubFm = FormSubs[matlSubIndx](prefix=prefixvals['matl'], obj=initialobj['matl'])
     schedSet = FormSubs[schdSubIndx](prefix=prefixvals['schedule'], obj=initialobj['schedule'])
 
-    changes_saved = {
+    changes_saved:Dict[str, Any] = {
         'main': False,
         'matl': False,
         'schedule': False
@@ -107,6 +108,7 @@ def fnCountEntryView(
         ]
         if len(chgd_dat['main']) > 0:
             formRec.save()
+            changes_saved['main'] = formRec.id
         
         # now changes to material record
         chgd_dat['matl'] = [
@@ -115,6 +117,7 @@ def fnCountEntryView(
         ]
         if len(chgd_dat['matl']) > 0:
             matlSubFm.save()
+            changes_saved['matl'] = matlRec.id
 
             # count schedule subform
             # if schedSet.has_changed():
@@ -122,25 +125,12 @@ def fnCountEntryView(
             #      chgd_dat['schedule'] = schedSet.changed_data
             #      changes_saved['schedule'] = True
 
-            # prep new record to present
-            # currRec = modelMain(**initialvals['main'])
-            # recNum=0
-            # MatlNum = 0
-            # matlRec = getattr(currRec,'Material', '')
-            # # MaterialID = getattr(matlRec, 'pk', None)
-
-            # NOTE: If you want the cleanest flow, do a redirect after POST and rebuild the forms on the following GET. That avoids carrying any POST state forward at all.
-            return redirect(url_for('WICS.CountEntryForm'))
-            # mainFm = FormMain(formdata=None, obj=initialobj["main"], prefix=prefixvals["main"])
-            # matlSubFm = FormSubs[matlSubIndx](formdata=None, obj=initialobj["matl"], prefix=prefixvals["matl"])
-            # schedFm = FormSubs[schdSubIndx](formdata=None, obj=initialobj["schedule"], prefix=prefixvals["schedule"])
-
-    else:   ## rec.method != 'POST'
-        # are the two lines below necessary?  AI autosuggest think they are, but I need to test it.  They are needed to populate the forms with the correct data when the page is first loaded, or when a navigation button is clicked.
-        # currRec = modelMain(**initialvals['main'])
-        # matlRec = modelSubs[matlSubIndx](**initialvals['matl'])
+        # we build the new record to present. We don't want to carry any POST state forward, but we do want to show the user the record they just saved. 
+        # We use the post-if POST/GET logic here so that changes_saved and chgd_dat will be passed into context.
         currRec = initialobj['main']
         matlRec = initialobj['matl']
+
+    else:   ## rec.method != 'POST'
 
         # TODO: add protection against no records
         recFirstPK = getattr(modelMain.query.order_by(modelMain.id).first(), 'id', 0)
@@ -190,22 +180,23 @@ def fnCountEntryView(
         if MatlNum != 0 and MatlNum != currRec.Material_id:
             currRec.Material_id = MatlNum
         model_class = modelSubs[matlSubIndx]
-        matlRec = app_db.session.get(model_class, MatlNum) or initialobj['matl']
+        matlRecNum = int(getattr(currRec, 'Material_id', 0) or 0)
+        matlRec = app_db.session.get(model_class, matlRecNum) or initialobj['matl']
 
-        # at this point, currRec and matlRec s/b correct
-        if currRec: 
-            mainFm = FormMain(formdata=None, obj=currRec, prefix=prefixvals['main'])
-        else:       
-            mainFm = FormMain(formdata=None, obj=initialvals['main'],  prefix=prefixvals['main'])
-        # I know this is broken now. I'll get around to it. I need to rethink the flow of how the subforms are built and populated. I want to be able to build the subforms with the main form, so that they can be displayed together, and then have them populate and save separately. I also need to think about how to handle the case where there is no material record, or no schedule record, and how to handle the case where there are multiple schedule records for a given date and material.
-        # I think I fixed it, but I need to test it. I also need to think about how to handle the case where there is no material record, or no schedule record, and how to handle the case where there are multiple schedule records for a given date and material.
-        if matlRec:
-            matlSubFm = FormSubs[matlSubIndx](formata=None, obj=matlRec, prefix=prefixvals['matl'])
-            matlRecNum = matlRec.id
-        else:
-            matlSubFm = FormSubs[matlSubIndx](formdata=None, obj=initialvals['matl'], prefix=prefixvals['matl'])
-            matlRecNum = 0
     #endif rec.method == 'POST'
+
+    # at this point, currRec and matlRec s/b correct
+    # prep the forms for display, using the current records (or initial values if no record exists)
+    if currRec: 
+        mainFm = FormMain(formdata=None, obj=currRec, prefix=prefixvals['main'])
+    else:       
+        mainFm = FormMain(formdata=None, obj=initialvals['main'],  prefix=prefixvals['main'])
+    if matlRec and getattr(matlRec, 'id', None):
+        matlSubFm = FormSubs[matlSubIndx](formdata=None, obj=matlRec, prefix=prefixvals['matl'])
+        matlRecNum = matlRec.id
+    else:
+        matlSubFm = FormSubs[matlSubIndx](formdata=None, obj=initialvals['matl'], prefix=prefixvals['matl'])
+        matlRecNum = 0
 
     # all counts for this Material today
     if matlRec:
@@ -217,6 +208,7 @@ def fnCountEntryView(
         todayscounts = None
     # endif matlRec
 
+    # review this old code. Not needed anymore?
     # if currRec:
     #     getDate = currRec.CountDate
     #     if matlRec and modelSubs[schdSubIndx].objects.using(dbUsing).filter(CountDate=getDate, Material=matlRec).exists():
@@ -261,8 +253,7 @@ def fnCountEntryView(
 
     # CountEntryForm MaterialList dropdown
     matlchoiceForm = {}
-    if MatlNum==None: MatlNum = 0
-    if MatlNum:     # this implies matlRec exists and is a real record, so we can use it to populate the dropdown
+    if matlRecNum:     # this implies matlRec exists and is a real record, so we can use it to populate the dropdown
         assert matlRec is not None, "matlRec should not be None when MatlNum is provided"
         # matlchoiceForm['gotoItem'] = matlRec        # the template pulls Material from this record
         matlchoiceForm['gotoItem'] = f'{matlRec.Material}:{matlRec.org.orgname}'
@@ -273,10 +264,8 @@ def fnCountEntryView(
 
     # display the form
     cntext = {'frmMain': mainFm,
-            'recNum': recNum,       # remove - it's in frmMain.id
             'newRecord_flag': (currRec.id is None or currRec.id==0),
             'frmMatlInfo': matlSubFm,
-            'MatlNum': MatlNum,     # remove - it's in matlSubFm.id
             'todayscounts': todayscounts,
             'matlchoiceForm':matlchoiceForm,
             'noSchedInfo':(not schedinfo),

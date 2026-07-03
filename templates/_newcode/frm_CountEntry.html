@@ -32,7 +32,7 @@ button:focus {
 {% block tTitle %}Count Entry{% endblock %}
 {% block formName %}Count Entry{% endblock %}
 {% block statusMsgs %}
-    {% if changes_saved.main %}
+    {% if changed_data.main|count > 0 %}
         <div class="alert alert-success p-0 alert-dismissible fade show">
             <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
             Count record {{ changes_saved.main }} successfully saved.
@@ -41,7 +41,7 @@ button:focus {
             </span>
         </div>
     {% endif %}
-    {% if changes_saved.matl %}
+    {% if changed_data.matl|count > 0 %}
         <div class="alert alert-success p-0 alert-dismissible fade show">
             <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
             Material changes for this record successfully saved.
@@ -50,7 +50,7 @@ button:focus {
             </span>
         </div>
     {% endif %}
-    {% if changes_saved.schedule %}
+    {% if changed_data.schedule|count > 0 %}
         <div class="alert alert-success p-0 alert-dismissible fade show">
             <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
             Count Schedule changes for this record successfully saved.
@@ -62,9 +62,9 @@ button:focus {
 {% endblock %}
     <hr>
 
-{% block boddy %}
+layoutForm test -- {{ newRecord_flag }}
 {% block layoutFormFixedTop %}
-    {{ frmMain.id.value | default('NEW', True) }}
+    {{ frmMain.id.data | default('NEW', True) }}
     <span class="col-5 bg-secondary text-warning">Count Date, Material, Actual Counter, Location and either LocOnly or Ctd Qty are required before Saving the form</span>
 {% endblock layoutFormFixedTop %}
 {% block formBody %}
@@ -73,13 +73,13 @@ button:focus {
         {{ frmMain.id(type='hidden') }}
          <!-- form header -->
         {% if frmMain.errors %}{{ frmMain.errors }}{% endif %}
-        {{ frmMain.id.value }}
+        {{ frmMain.id.data }}
         <!-- main part of form -->
         <!-- put initial focus on Material and/or init CountDate to today(local), skip CycCtID -->
         <!-- div class="container-fluid m-1" -->
         <div class="container m-1">
             <div class="row g-0">
-            <div class="col-3"> test - {{ frmMain.CountDate.value }}
+            <div class="col-3"> test - {{ frmMain.CountDate.data }}
                 Count Dt: {{ frmMain.CountDate(type="date", class="border border-5 border-danger fw-bold", style="width:10em;", autofocus=True, onchange="loadExtraInfo();", required=True) }}
             </div>
             {# <div class="col-1">{{ frmMain.CycCtID(hidden=True) }}</div> #}
@@ -146,9 +146,8 @@ button:focus {
         </div>
         <hr>
         <div class="row g-0">
-            id = {{ frmMatlInfo.id.value }}, MatlPK = {{ MatlNum }}
-            {{ frmMatlInfo.id.value | default('---', True) }}
-            <input type="hidden" id="MatlPK" name="MatlPK" value="{{ frmMatlInfo.id.value }}" required></input>     {# to go away #}
+            id = {{ frmMatlInfo.id.data }}
+            {{ frmMatlInfo.id.data | default('---', True) }}
             {{ frmMatlInfo.id }}    {# hidden field #}
             <div class="col-4">Desc: {{ frmMatlInfo.Description(size="40") }}</div>
             <div class="col-2">Pt Type: {{ frmMatlInfo.PartType(class="need-Matl-Dt", style="width:7em") }}</div>
@@ -176,7 +175,7 @@ button:focus {
 							{% if ctRec.LocationOnly %}
 								<b>LOCATION ONLY</b>
 							{% else %}
-								{{ ctRec.CTD_QTY_Expr }} = {{ ctRec.CTD_QTY_Expr|eval_arith }}
+								{{ ctRec.CTD_QTY_Expr }} = {{ eval_arith(ctRec.CTD_QTY_Expr) }}
 							{% endif %}
 						</td>
 					</tr>
@@ -255,6 +254,7 @@ button:focus {
     </div>
 {% endblock layoutButtons %}
 
+{% block postFormHTML %}
 <dialog id="modalGeneric" class="p-4 border-0 rounded shadow">
   <h3 id="modalTitle"></h3>
   <!-- Target this specifically for the body text -->
@@ -263,19 +263,20 @@ button:focus {
     <!-- Buttons will be dynamically inserted here by the function -->
   </div>
 </dialog>
+{% endblock postFormHTML %}
 
 
+{% block postFormScripts %}
 <script>
     // var $form = $('.trackformchanges');
     var forms = document.getElementById("CEForm").querySelectorAll(":scope input");
-    const thisRecNum = {{ frmMain.id.value or 0 }};
     const ctdtID = document.getElementById("{{frmMain.CountDate.id}}");
     const orig_ctdt = ctdtID.value;
     const mtlnmID = document.getElementById("Material-input-visible");
     const orig_matl = mtlnmID.value;
     const mtlnmbrID = document.getElementById("{{frmMain.Material_id.id}}");
     const orig_matl_id = mtlnmbrID.value;
-    const url_subst_prefix = "/";       // prefix/delimeter of dynamically generated values in url_for() URLs
+    const countEntryBaseUrl = "{{ url_for('WICS.CountEntryForm') }}";
     let initialState;
     // set up MatlMap for verifying if an entered Material # is valid
     var MatlMap = new Map(
@@ -365,6 +366,11 @@ button:focus {
         confirmLeave(()=>loadCountEntryRec(goDir));
     };
 
+    function getCurrentRecNum() {
+        const recNum = Number.parseInt(document.getElementById('{{frmMain.id.id}}').value, 10);
+        return Number.isNaN(recNum) ? 0 : recNum;
+    }
+
     function sCE(){ 
         const EvalExprID = 'EvalExpr';
         if (document.getElementById("{{frmMain.LocationOnly.id}}").disabled) {
@@ -429,21 +435,15 @@ button:focus {
             return;
         } 
 
-        newRec = "{{ url_for('WICS.CountEntryForm_ChgKey', recNum=9999, reqDate='passedCountDate', MatlNum='matl') }}";
-        R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
-        if ( isNaN(R) ) { R = 0 };
-        newRec = newRec.replace(url_subst_prefix+"9999",url_subst_prefix+R);
-        newRec = newRec.replace(url_subst_prefix+"passedCountDate",url_subst_prefix+dVal);
-        mNum="None"; if (mtlnmID.value != "") {mNum = MatlMap.get(mtlnmID.value)};
-        newRec = newRec.replace(url_subst_prefix+"matl",url_subst_prefix+mNum);
+        const R = getCurrentRecNum();
+        let mNum = "None";
+        if (mtlnmID.value != "") { mNum = MatlMap.get(mtlnmID.value); }
+        const newRec = `${countEntryBaseUrl}/${R}/${dVal}/${mNum}`;
         window.location = newRec;
     };
     function loadCountEntryRec(goDir) {
-        R = Number.parseInt( document.getElementById('{{frmMain.id.id}}').value );
-        if ( isNaN(R) ) { R = 0 };
-        newRec = "{{ url_for('WICS.CountEntryFormGo_Command', recNum=-1, gotoCommand='gotoCommand') }}"
-        newRec = newRec.replace(url_subst_prefix+"-1",url_subst_prefix+R);
-        newRec = newRec.replace(url_subst_prefix+"gotoCommand",url_subst_prefix+goDir);
+        const R = getCurrentRecNum();
+        const newRec = `${countEntryBaseUrl}/Go/${R}/${goDir}`;
         window.location = newRec;
     };
 
@@ -594,4 +594,4 @@ modal.addEventListener("cancel", (event) => {
     }
 
 </script>
-{% endblock boddy %}
+{% endblock postFormScripts %}
