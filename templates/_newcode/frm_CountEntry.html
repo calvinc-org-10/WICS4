@@ -64,7 +64,7 @@ button:focus {
 
 {% block boddy %}
 {% block layoutFormFixedTop %}
-    -{{ recNum }}- / -{{ frmMain.id.value }}-
+    {{ frmMain.id.value | default('NEW', True) }}
     <span class="col-5 bg-secondary text-warning">Count Date, Material, Actual Counter, Location and either LocOnly or Ctd Qty are required before Saving the form</span>
 {% endblock layoutFormFixedTop %}
 {% block formBody %}
@@ -146,8 +146,10 @@ button:focus {
         </div>
         <hr>
         <div class="row g-0">
-            {{ frmMatlInfo.id }}
-            <input type="hidden" id="MatlPK" name="MatlPK" value={{ frmMatlInfo.id }} required></input>
+            {{ frmMatlInfo.id.value }}
+            {{ frmMatlInfo.id.value | default('---', True) }}
+            <input type="hidden" id="MatlPK" name="MatlPK" value="{{ frmMatlInfo.id.value }}" required></input>     {# to go away #}
+            {{ frmMatlInfo.id }}    {# hidden field #}
             <div class="col-4">Desc: {{ frmMatlInfo.Description(size="40") }}</div>
             <div class="col-2">Pt Type: {{ frmMatlInfo.PartType(class="need-Matl-Dt", style="width:7em") }}</div>
             <div class="col-5">

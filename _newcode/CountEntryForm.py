@@ -52,6 +52,7 @@ class CountEntryForm(FlaskForm):
 
 
 class RelatedMaterialInfo(FlaskForm):
+    id = forms.HiddenField()
     Description = forms.StringField(validators=[Disabled()])
     PartType = forms.SelectField(choices=[])
     #                             app_db.session.query(WhsePartTypes).order_by(WhsePartTypes.WhsePartType).all())

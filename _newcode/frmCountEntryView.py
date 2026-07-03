@@ -210,7 +210,7 @@ def fnCountEntryView(
     # all counts for this Material today
     if matlRec:
         matchDate = reqDate
-        if currRec: matchDate = currRec.CountDate
+        if currRec.id is not None: matchDate = currRec.CountDate
         todayscounts = modelMain.query.filter(modelMain.CountDate==matchDate,modelMain.Material_id==matlRecNum).all()
     else: 
         # todayscounts = modelMain()
@@ -273,15 +273,16 @@ def fnCountEntryView(
 
     # display the form
     cntext = {'frmMain': mainFm,
+            'recNum': recNum,       # remove - it's in frmMain.id
+            'newRecord_flag': (currRec.id is None or currRec.id==0),
             'frmMatlInfo': matlSubFm,
-            'MatlNum': MatlNum,
+            'MatlNum': MatlNum,     # remove - it's in matlSubFm.id
             'todayscounts': todayscounts,
             'matlchoiceForm':matlchoiceForm,
             'noSchedInfo':(not schedinfo),
             'frmSchedInfo': schedFm,
             'changes_saved': changes_saved,
             'changed_data': chgd_dat,
-            'recNum': recNum,
             }
     templt = '_newcode/frm_CountEntry.html'
     return checkTemplate_and_render(templt, **cntext)
