@@ -54,7 +54,8 @@ class CountEntryForm(FlaskForm):
 class RelatedMaterialInfo(FlaskForm):
     id = forms.HiddenField()
     Description = forms.StringField(validators=[Disabled()])
-    PartType = forms.SelectField(choices=[])
+    # PartType_id = forms.HiddenField()
+    PartType_id = forms.SelectField(choices=[])
     #                             app_db.session.query(WhsePartTypes).order_by(WhsePartTypes.WhsePartType).all())
     TypicalContainerQty = forms.StringField()
     TypicalPalletQty = forms.StringField()
@@ -66,7 +67,7 @@ class RelatedMaterialInfo(FlaskForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Load choices at runtime (request/app context), not at module import.
-        self.PartType.choices = choices_for_whseparttypes()  # type: ignore[assignment]
+        self.PartType_id.choices = choices_for_whseparttypes()  # type: ignore[assignment]
 
     # def __init__(self, id, *args, **kwargs) -> None:
     #     super().__init__(*args, **kwargs)
@@ -94,6 +95,7 @@ class RelatedMaterialInfo(FlaskForm):
 
 
 class RelatedScheduleInfo(FlaskForm):
+    id = forms.IntegerField()
     CountDate = forms.DateField(validators=[Disabled()])
     Counter = forms.StringField(validators=[Disabled()])
     Priority = forms.StringField(validators=[Disabled()])
