@@ -1,4 +1,4 @@
-{% extends "_moveto_cTools/cToolsFormLayout.html" %}
+{% extends "cToolsFormLayout.html" %}
 
 {% block customCSS %}
 button:focus {
@@ -26,7 +26,7 @@ button:focus {
     background-color: rgba(0, 0, 0, 0.5); /* Dim the background */
 }
 
-{% include "_moveto_cTools/proposed-table-CSS.css" %}
+{% include "proposed-table-CSS.css" %}
 {% endblock %}
 
 {% block tTitle %}Count Entry{% endblock %}
@@ -144,8 +144,9 @@ button:focus {
         </div>
         <hr>
         <div class="row g-0">
+            {{ frmMatlInfo.hidden_tag() }}
             <span>{{ frmMatlInfo.id.data | default('---', True) }}</span>
-            {{ frmMatlInfo.id }}    {# hidden field #}
+            {# <div class="col-4">Desc: {{ frmMatlInfo.Description(size="40", disabled=True) }}</div> #}
             <div class="col-4">Desc: {{ frmMatlInfo.Description(size="40") }}</div>
             <div class="col-2">Pt Type: {{ frmMatlInfo.PartType_id.data }} {{ frmMatlInfo.PartType_id(class="need-Matl-Dt", style="width:7em") }}</div>
             <div class="col-5">

@@ -24,7 +24,7 @@ def define_routes(flskapp):
 #################################################
 #################################################
 
-    from _newcode.frmCountEntryView import fnCountEntryView
+    from views.ActualCounts.frmCountEntryView import fnCountEntryView
     
     # WICS routes
     WICS_bp = Blueprint('WICS', __name__, url_prefix='/WICS')
@@ -36,17 +36,17 @@ def define_routes(flskapp):
         )
     WICS_bp.add_url_rule('/CountEntryForm/Go/<int:recNum>',
         view_func=fnCountEntryView,
-        methods=['GET'],
+        methods=['GET','POST'],
         endpoint='CountEntryFormGo'
         )
     WICS_bp.add_url_rule('/CountEntryForm/Go/<int:recNum>/<string:gotoCommand>',
         view_func=fnCountEntryView,
-        methods=['GET'],
+        methods=['GET','POST'],
         endpoint='CountEntryFormGo_Command'
         )
     WICS_bp.add_url_rule('/CountEntryForm/<int:recNum>/<string:reqDate>/<string:MatlNum>',
         view_func=fnCountEntryView,
-        methods=['GET'],
+        methods=['GET','POST'],
         defaults={'gotoCommand':'ChgKey'},
         endpoint='CountEntryForm_ChgKey'
         )
