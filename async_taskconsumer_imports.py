@@ -2,7 +2,7 @@ from async_tasks import huey
 
 from models import async_comm
 
-from views.Materials.updtMatlList import (
+from views.Material.updtMatlList import (
     proc_MatlListSAPSprsheet_01ReadSpreadsheet,
     proc_MatlListSAPSprsheet_02_identifyexistingMaterial,
     proc_MatlListSAPSprsheet_03_UpdateExistingRecs,

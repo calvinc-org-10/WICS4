@@ -26,13 +26,13 @@ FormNameToURL_Map['frmcountentry'.lower()] = (None, views.ActualCounts.fnCountEn
 # FormNameToURL_Map['frmcountsummarypreview'.lower()] = ('CountSummaryReport', forms.fmActualCounts.rptCountSummary)
 # FormNameToURL_Map['frmrequestedcountsummary'.lower()] = ('CountSummaryReport-v-init', None)
 # FormNameToURL_Map['frmimportsap'.lower()] = ('UploadSAPSprSht', None)
-# FormNameToURL_Map['frmmaterial'.lower()] = ('MatlForm', forms.MaterialForm)
+FormNameToURL_Map['frmmaterial'.lower()] = ('WICS.MaterialForm', None)   # make me work!
 # FormNameToURL_Map['frmmpnlookup'.lower()] = ('MPNLookup', None)
 # FormNameToURL_Map['frmParts-By-Type-with-LastCounts'.lower()] = ('MatlByPartType', None)
 # FormNameToURL_Map['rptMaterialByLastCount'.lower()] = ('MatlByLastCountDate', None)
 # FormNameToURL_Map['rptMaterialByDESCValue'.lower()] = ('MatlByDESCValue', None)
 # FormNameToURL_Map['matllistupdt'.lower()] = ('UpdateMatlListfromSAP', _newcode.updtMatlList.fnUpdateMatlListfromSAP)
-FormNameToURL_Map['matllistupdt'.lower()] = (None, views.Materials.updtMatlList.fnUpdateMatlListfromSAP)
+FormNameToURL_Map['matllistupdt'.lower()] = (None, views.Material.updtMatlList.fnUpdateMatlListfromSAP)
 # FormNameToURL_Map['frmRandCountScheduler'.lower()] = (None, None)
 
 # FormNameToURL_Map['frmCountScheduleEntry'.lower()] = ('CountScheduleForm', forms.CountScheduleRecordForm)

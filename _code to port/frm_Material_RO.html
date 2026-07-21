@@ -1,0 +1,704 @@
+{% extends "WICS_common.html" %}
+{% load widget_tweaks %}
+{% load evaluate_arithmetic %}
+{% load static %}
+
+{% block customCSS %}
+button:focus {
+    border-color:#9ecaed;   <!-- convert to rgba -->
+    box-shadow: 0 0 5px rgba(0, 0, 255, 1);
+    -webkit-box-shadow: 0 0 5px rgba(0, 0, 255, 1);
+    -moz-box-shadow: 0 0 5px rgba(0, 0, 255, 1);
+    border:1px solid rgba(0,0,255, 0.8);
+}
+{% include "proposed-table-CSS.css" %}
+{% endblock %}
+{% block tTitle %}Materials{% endblock %}
+{% block formName %}{% endblock %}  {# purposely left blank #}
+{% block statusMsgs %}
+    {% if changes_saved.main %}
+        <div class="alert alert-success p-0 alert-dismissible fade show">
+            <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
+            This Material record successfully saved.
+            ChDat: {{ changed_data.main }}
+        </div>
+    {% endif %}
+    {% if changes_saved.counts %}
+        <div class="alert alert-success p-0 alert-dismissible fade show">
+            <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
+            Count changes for this Material record successfully saved.
+            ChDat: {{ changed_data.counts }}
+        </div>
+    {% endif %}
+    {% if changes_saved.schedule %}
+        <div class="alert alert-success p-0 alert-dismissible fade show">
+            <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
+            Count Schedule changes for this Material record successfully saved.
+            ChDat: {{ changed_data.schedule }}
+        </div>
+    {% endif %}
+    {% if changes_saved.MfrPN %}
+        <div class="alert alert-success p-0 alert-dismissible fade show">
+            <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
+            Mfr Pt Num changes for this Material record successfully saved.
+            ChDat: {{ changed_data.MfrPN }}
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block boddy %}
+<hr>
+{{ frmMain.instance.pk }}
+
+<!-- GoTo -->
+<!-- <form id="gotoForm"> -->
+<div class="container text-center bg-secondary">
+    <div class="row mx-auto max-width=95%">
+        <div class="col mx-auto">
+            <h1><label for="gotoID">GoTo Material #</label>
+            <input list="Material-list" id="gotoID" name="gotoID" onfocus="$(this).select();" onchange="processGoToReq();" value="{{gotoForm.gotoItem}}">
+            <span class="bi-caret-down-square" style="position:relative;top:+0px;font-size:45px;left:-59px;" onclick="$gotoTextBox.focus();"></span>
+        </h1>
+            <datalist id="Material-list">
+                {% for itm in gotoForm.choicelist %}
+                    <option value="{{itm.Material_org}}">
+                {% endfor %}
+            </datalist>
+        </div>
+    </div>
+</div>
+<!-- </form> -->
+
+<form id="dumdummyform"></form>
+
+<form id="FmMain" name="FmMain" class="trackformchanges" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <!-- form header -->
+    {% if frmMain.non_form_errors %}{{ frmMain.non_form_errors }}{% endif %}
+    {% if frmMain.errors %}{{ frmMain.errors }}{% endif %}
+
+    {# django does this field wrong - when it presents it as a <select>, it makes the selected value the initial value, not the actual #}
+    <input type="hidden" name="material-org" id="id_material-org" value="{{ frmMain.instance.org_id }}">
+    <hr>
+
+    <!-- main part of form -->
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-10">
+                <div class="row">
+                    <div class="col-8">
+                        {{ frmMain.instance.org }}
+                        Material: {% render_field frmMain.Material size="15" readonly="true" %}
+                        Description: {% render_field frmMain.Description size="50" readonly="true" %}
+                        <input type="hidden" name="OrigMaterial" value="{{ frmMain.Material.value }}"></input>
+                        <input type="hidden" name="MatlPK" value="{{ frmMain.instance.pk }}"></input>
+                    </div>
+                    <div class="col">
+                        Part Type:  {% render_field frmMain.PartType style="width:10em" disabled="true" %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        SAP ABC Designation: {% render_field frmMain.SAPABC size="4" %}
+                        Price: {% render_field frmMain.Price style="width:8em" %}
+                        Price Unit: {% render_field frmMain.PriceUnit style="width:8em" %}
+                        Typ Container Qty: {% render_field frmMain.TypicalContainerQty style="width:6em" %}
+                        Typ Plt Qty: {% render_field frmMain.TypicalPalletQty style="width:6em" %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        SAP Manufacturer: {% render_field frmMain.SAPManuf size="15" %}
+                        SAP MPN: {% render_field frmMain.SAPMPN size="15" %}
+                        SAP Matl Type: {% render_field frmMain.SAPMaterialType size="4" %}
+                        SAP Matl Grp: {% render_field frmMain.SAPMaterialGroup size="4" %}
+                    </div>
+                </div>
+                <div class="row">
+                <div class="col">
+                    Notes: {% render_field frmMain.Notes size="100" readonly="true" %}
+                </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-8 text-start">
+                        SAP Date: {{ SAPSet.SAPDate }}
+                        {% if SAPSet.SAPTable %}
+                            {% for s in SAPSet.SAPTable %}({{ s.MaterialPartNum }}, {{ s.StorageLocation }}, {{ s.Amount }}, {{s.BaseUnitofMeasure}}){% endfor %}
+                        {% else %}
+                            <b> No SAP Quantity</b>
+                        {% endif %}
+                        <br>
+                        Last Found At {{ lastFoundAt.LastFoundAt }} on {{ lastFoundAt.LastCountDate }}
+                    </div>
+                    <!-- 
+                    <div class="col-2">
+                    </div>
+                    ``-->
+                    {% comment %}
+                    NOTE: if this goes back, it needs to be moved outside the form, else it makes the form dirty for exit
+                    <div class="col text-end">
+                    HistoryCutoffDate
+                    <input type="date"
+                        name="HistoryCutoffDate"
+                        id="HistoryCutoffDate"
+                        form="dumdummyform"
+                        value="{{HistoryCutoffDate|date:"Y-m-d"}}"
+                        onchange="chgHistoryCutoffDate();"
+                        >
+                    </div>
+                    {% endcomment %}
+                </div>  <!-- row for SAP/LastFound info-->
+            </div>  <!-- Left side of Material Info header info (photo is on right side) -->
+            <div class="col" style="border-left: solid;">
+                {# Photos will go here #}
+                <div id="MatlPhotoCarousel" class="carousel slide" data-bs-ride="false">
+                <div class="carousel-indicators">
+                    {% for photo in PhotoSet %}
+                        <button type="button" data-bs-target="#MatlPhotoCarousel" data-bs-slide-to="{{ forloop.counter0 }}"{% if forloop.first %} class="active"{% endif %}></button>
+                    {% endfor %}
+                </div>
+                <div class="carousel-inner">
+                    {% for photo in PhotoSet %}
+                        <div id="MatlPhoto-{{ forloop.counter0 }}" class="carousel-item {% if forloop.first %}active{% endif %}">
+                        <img src="{{ photo.Photo.url }}" class="d-block w-100" height=200 alt="...">
+                        <input type="hidden" class="photo-id" name="Photo{{ forloop.counter0 }}-id" value="{{ photo.pk }}"></input>
+                        {% comment %}
+                        Leave this around in case there's a need to implement Notes, already in the model
+                        <div class="carousel-caption d-none d-md-block">
+                            <h5>Number {{ forloop.counter0 }}</h5>
+                            <p>{{ photo.url }}</p>
+                        </div>
+                        {% endcomment %}
+                        </div>
+                    {% empty %}
+                        <h3>No Photos for {{ frmMain.Material.value }}</h3>
+                    {% endfor %}
+                </div>  <!-- photo carousel inner div -->
+                <button class="carousel-control-prev" type="button" data-bs-target="#MatlPhotoCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#MatlPhotoCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+                </div>  <!-- id="MatlPhotoCarousel" -->
+                <div>   <!-- just below the PhotoSet -->
+                    {% if PhotoSet %}
+                    <div id="whichPhotoAmI"></div>
+                    {% endif %}
+                </div>
+                <input type="hidden" id="PhotoOp" name="PhotoOp" value=""></input>
+            </div>  <!-- right side of Material header (photos) -->
+        </div>  <!-- SAP LastFound info row -->
+    </div>  <!-- Material form header -->
+
+    <hr>
+
+    <!-- subforms, implemented by Bootstrap Nav pills -->
+    <ul class="nav nav-pills ps-1">
+        <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="pill" href="#CountDetail">Actual Count Detail</a>
+        </li>
+        <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="pill" href="#CountSummary">Actual Count Summary</a>
+        </li>
+        <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="pill" href="#CountSchedule">Count Scheduling</a>
+        </li>
+        <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="pill" href="#FoundAt">Found At</a>
+        </li>
+    </ul>
+    <!-- Tab panes -->
+    <div class="tab-content">
+        <div class="tab-pane container-fluid active" id="CountDetail">
+            {{ countset.management_form }}
+            <table>
+                <thead>
+                    {% if countset.non_form_errors %}
+                    <tr><td colspan=7>
+                        {{ countset.non_form_errors }}
+                    </td></tr>
+                    {% endif %}
+                    <tr>
+                        <td colspan=7>
+                            {% for err in countset.errors %}
+                                {% if err %}{{ err|default:'' }}<br>{% endif %}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>   <!-- id -->
+                        <td>Count Date</td>
+                        <td>Counter</td>
+                        <td>Loc Only / Physical Inventory</td>
+                        <td>LOCATION</td>
+                        <td>Pos Not Rec / Mvmnt</td>
+                        <td>Count Notes</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ff in countset %}
+                    {% ifchanged ff.CountDate.value %}{% if not forloop.first %}
+                    <tr><td colspan=7>&nbsp;</td></tr>   <!-- blank line intentional to separate dates -->
+                    {% endif %}{% endifchanged %}
+                    <tr>
+                        <td>
+                            {{ ff.id }}
+                            {{ ff.instance.id }}:&nbsp;
+                        </td>
+                        <td>{% render_field ff.CountDate size="10" readonly="true" %}</td>
+                        <td>{% render_field ff.Counter size="10" readonly="true" %}</td>
+                        <td>
+                            {% with sCE_parm=forloop.counter0  %}
+                            {# django AND widget_tweaks both screw up the dynamic onchange building, so I'm doing it myself! #}
+                            <input type="checkbox"
+                                    id="{{ ff.LocationOnly.id_for_label }}"
+                                    name="{{ff.LocationOnly.html_name}}"
+                                    onchange="sCE({{ sCE_parm }});"
+                                    disabled
+                                    {% if ff.LocationOnly.value %} checked{% endif %}
+                                    >
+                            &nbsp;&nbsp;
+                            <input type="text"
+                                    id="{{ ff.CTD_QTY_Expr.id_for_label }}"
+                                    name="{{ff.CTD_QTY_Expr.html_name}}"
+                                    {% if ff.CTD_QTY_Expr.value != None %} value="{{ ff.CTD_QTY_Expr.value|stringformat:'s' }}"{% endif %}
+                                    maxlength="500" size="35"
+                                    onchange="sCE({{ sCE_parm }});"
+                                    readonly
+                                    >
+                            <span class="container-md" id="EvalExpr{{ sCE_parm }}">????</span>
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% render_field ff.LOCATION size="8" readonly="true" %}
+                        </td>
+                        <td style="text-align:center;">
+                            {{ ff.FLAG_PossiblyNotRecieved|attr:"disabled" }}
+                            {{ ff.FLAG_MovementDuringCount|attr:"disabled" }}
+                        </td>
+                        <td>{% render_field ff.Notes size="30" readonly="true" %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>  <!-- CountDetail tab -->
+        <div class="tab-pane container fade" id="CountSummary">
+            {{ countsummset.management_form }}
+            <table>
+                <thead>
+                    <tr>
+                        <td>Count Date</td>
+                        <td>Total Counted</td>
+                        <td>SAP Date</td>
+                        <td>SAP Qty</td>
+                        <td>Diff</td>
+                        <td>Acc %</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ffrm in countsummset %}
+                        <tr>
+                        {% for ffld in ffrm %}
+                            {% if ffld.name != 'Material' %}<td>{{ ffld }}</td>{% endif %}
+                        {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>  <!-- card-body of CountSummary tab -->
+            </table>  <!-- card for CountSummary -->
+        </div>  <!-- CountSummary tab -->
+        <div class="tab-pane container fade" id="CountSchedule">
+            {{ scheduleset.management_form }}
+            <table>
+                <thead>
+                    {% if scheduleset.non_form_errors %}
+                    <tr><td colspan=6>
+                        {{ scheduleset.non_form_errors }}
+                    </td></tr>
+                    {% endif %}
+                    <tr>
+                        <td colspan=6>
+                            {% for err in scheduleset.errors %}
+                                {% if err %}{{ err|default:'' }}<br>{% endif %}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>Count Date</td>
+                        <td>Counter</td>
+                        <td>Priority</td>
+                        <td>Reason Scheduled</td>
+                        <td>Notes</td>
+                    </tr>    <!-- container with header row -->
+                </thead>  <!-- card-header -->
+                <tbody>
+                    {% for ff in scheduleset %}
+                    <tr>
+                        <td>{{ ff.id }}{{ ff.instance.id }}:&nbsp;</td>
+                        <td>{% render_field ff.CountDate size="10" readonly="true" %}</td>
+                        <td>{% render_field ff.Counter size="10" readonly="true" %}</td>
+                        <td>{% render_field ff.Priority size="10" readonly="true" %}</td>
+                        <td>{% render_field ff.ReasonScheduled size="40" readonly="true" %}</td>
+                        <td>{% render_field ff.Notes size="30" readonly="true" %}</td>
+                    </tr>  <!-- row -->
+                    {% endfor %}
+                </tbody>  <!-- card body -->
+            </table>  <!-- card for CountSchedule tab -->
+        </div>  <!-- CountSchedule tab -->
+        <div class="tab-pane container fade" id="FoundAt">
+            <div class="card">
+                <div class="card-header">
+                    <div class="container"><div class="row">
+                        <div class="col-4">
+                            Count Date - Found At
+                        </div>
+                    </div></div>
+                </div>
+                <div class="card-body no-padding" style="height:210px; overflow: auto;">
+                    <ul>
+                    {% for ff in FoundAt %}
+                        <li>
+                        {{ ff.CountDate }}:
+                        {{ ff.FoundAt }}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- form footer -->
+    <br>
+    <div class="container">
+        <div class="row mx-auto max-width=100%">
+            <div class="col-3">
+            </div>
+            <div class="col-7">
+            </div>
+            <div class="col">
+                <button id="close_btn" type="button">
+                    <img src="{% static 'stop-road-sign-icon.svg' %}" width="20" height="20"></img>
+                    Close Form
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="modalGeneric" class="modal">
+</div>
+
+<div id="modalGetPhoto" class="modal">
+    Select the photo to upload (just one file at a time now - later I'll implement multichoice)
+    <input type="file" accept="image/*" form="FmMain" name="newPhoto"></input>
+</div>
+
+<script>
+var $forms = document.getElementById("FmMain").querySelectorAll(":scope input");
+var initialState
+var $gotoTextBox = document.getElementById("gotoID");
+// record the ID and GPN of current record (it's used often!)
+var thisMtlID = {{frmMain.instance.pk|default_if_none:0}}, thisMtlGPN = "{{frmMain.instance.Material}}"
+var CloseItFlag = false
+// set up MatlMap for verifying if an entered Material # is valid
+var MatlMap = new Map([
+    {% for itm in gotoForm.choicelist %}
+    ['{{itm.Material_org}}', {{itm.id}}],
+    {% endfor %}
+    ]);
+
+const MatlPhotoCarousel = document.getElementById("MatlPhotoCarousel");
+var currPhoto = {};
+
+//------------------
+
+function start_wait_spinner() { document.getElementById("wait_spinner").style.display = "block"; };
+function stop_wait_spinner() { document.getElementById("wait_spinner").style.display = "none"; };
+
+//------------------
+
+document.addEventListener("DOMContentLoaded", function() {
+    const EvalExprID = 'EvalExpr';
+
+    initialState = serialize($forms);
+    // fill in the Count evals
+    // I'll clean this up later, I promise!
+    for (let i=0; i < document.getElementById("id_countset-TOTAL_FORMS").value; i++) {
+        CQtyID = 'id_countset-' + i + '-CTD_QTY_Expr';  {# TODO: use template vars later #}
+        EvID = EvalExprID + i;  {# TODO: use template vars later #}
+        // showCountExpr(CQtyID, EvID);
+        sCE(i)
+        // fbody = Function("function dummyCE" + i + "() { showCountExpr(this.id, '" + EvID + "'); };");  {# TODO: figure out how to take advantage of this line - OR - if it's needed #}
+    };
+    CloseItFlag = false || {{ userReadOnly|lower }};
+
+    // how do I get MatlPhotoCarousel initial state?
+    if ({{ PhotoSet|length }} > 0) {
+        currPhoto = {'num': 0, 'element': document.getElementById("MatlPhoto-0")};
+        document.getElementById("whichPhotoAmI").innerText = "Photo "+(currPhoto.num+1).toString()+" of {{PhotoSet|length}}"
+    }
+});
+
+window.addEventListener("beforeunload",  function(event) {
+    if (CloseItFlag) {
+        start_wait_spinner();
+    } else {
+        if (isFormChanged()) {
+            event.preventDefault();
+            confirmLeave(YesCloseIt);
+        } else {
+            start_wait_spinner();
+        }
+    };
+    });
+
+
+//---------------
+
+function YesCloseIt() {
+    CloseItFlag = true;
+    window.close();
+}
+
+//---------------
+
+const fmMain = document.getElementById('FmMain');
+
+function setPOSTAction(event) {
+    newRec = "{% url 'MatlForm' %}";
+    fmMain.action = newRec;
+    CloseItFlag = true;
+    }
+
+fmMain.addEventListener('submit', setPOSTAction);
+
+//---------------
+
+function loadMaterialRec() {
+    goID = $gotoTextBox
+    if (goID.value != null && goID.value != thisMtlGPN) {
+        newRec="{% url 'MatlFormRecNum' 0 %}"
+        newRec = newRec.replace("/0","/"+MatlMap.get(goID.value));
+        start_wait_spinner();
+        window.location = newRec;
+    } else {
+        goID.value = thisMtlGPN;
+    }
+};
+
+//---------------
+
+//TODO: later, duplicate this for closeform (see document.body.onbeforeunload)
+document.getElementById("close_btn").addEventListener("click",
+    function(evobj){
+        confirmLeave(YesCloseIt);
+    });
+
+//-------------------
+
+function chgHistoryCutoffDate() {
+    HistDateInput = $("#HistoryCutoffDate")
+    newRec="{% url 'MatlFormChgHistCutoffDate' 0 'offdate' %}"
+    newRec = newRec.replace("/0","/"+thisMtlID);
+    newRec = newRec.replace("/offdate","/"+HistDateInput.val());
+    start_wait_spinner();
+    window.location = newRec;
+};
+
+//-------------------
+
+function isValid_Material() {
+    if ($gotoTextBox.value.trim()=="") {
+            return false;
+    } else {
+        return MatlMap.has($gotoTextBox.value);
+    }
+
+}
+
+//------------------
+
+function processGoToReq() {
+    if (!isValid_Material()) {
+        if ($gotoTextBox.value != "") {
+            $("#modalGeneric").dialog("option","title","Invalid Material");
+            document.getElementById("modalGeneric").innerHTML = $gotoTextBox.value + " is not a valid Material number"
+
+            $("#modalGeneric").dialog("option","buttons",
+                {
+                    "OK" : function() {
+                        $(this).dialog("close"); }
+                } );
+            $("#modalGeneric").dialog("open");
+            }
+        $gotoTextBox.focus();
+        return;
+    }
+    confirmLeave(loadMaterialRec);
+};
+
+function isFormChanged() {
+    currState = serialize($forms);
+    return !(initialState === currState);
+};
+
+function confirmLeave(LeaveProc){
+    if (isFormChanged()) {
+        $("#modalGeneric").dialog("option","title","Leave Record?");
+        document.getElementById("modalGeneric").innerHTML = "This record has changed<br>Do you really want to leave without saving?"
+
+        $("#modalGeneric").dialog("option","buttons",
+            {
+                "Yes": function() {
+                    LeaveProc();
+                    $(this).dialog("close"); },
+                "No" : function() {
+                    $(this).dialog("close"); }
+            } );
+        $("#modalGeneric").dialog("open");
+    } else {
+        LeaveProc();
+    }
+};
+
+//------------------
+
+function CopyCount(n) {
+    const newdateid = "newcopy-date";
+    const todayDate = new Date();   // I STILL hate date manipulation!! Can't we all just agree on a standard???
+    const todayStr = todayDate.toISOString().slice(0,10)
+    $("#modalGeneric").dialog("option","title","Copy to what Date?");
+    document.getElementById("modalGeneric").innerHTML = '<input type="date" name="'+newdateid+'" id="'+newdateid+'" value="'+todayStr+'"></input>'
+
+    $("#modalGeneric").dialog("option","buttons",
+        {
+            "OK" : function() {
+                d = $("#"+newdateid).val();
+
+                const formdata = new FormData(fmMain);
+                idToCopy = "id_"+"{{countset.prefix}}-"+n+"-id";
+                formdata.append('copyCountFromid', document.getElementById(idToCopy).value);
+                formdata.append('copyCountToDate', d);
+
+                // location.reload()
+                const req = new XMLHttpRequest();
+                req.addEventListener("loadend", (evnt) => {
+                    location.reload();
+                    });
+                const thisurl="{% url 'MatlFormRecNum' frmMain.instance.pk|default_if_none:0 %}";
+                req.open("POST", thisurl);
+
+                start_wait_spinner();
+                req.send(formdata);
+
+                $(this).dialog("close");
+            },
+            "Cancel" : function() {
+                $(this).dialog("close");
+            }
+        } );
+    $("#modalGeneric").dialog("open");
+
+};
+
+//------------------
+
+// handle Modal
+$("#modalGeneric").dialog({
+    autoOpen: false,
+    closeOnEscape: false,
+    modal: true,
+    hide: "puff",
+    position: {
+        my: "top center", at: "top center"
+    }
+});
+
+
+//------------------
+
+function sCE(n){
+    const EvalExprID = 'EvalExpr';
+    const CTDQTY_Exp = 'id_countset-' + n + '-CTD_QTY_Expr';
+
+    if (document.getElementById("id_countset-" + n + "-LocationOnly").checked) {
+        document.getElementById(EvalExprID+n).innerHTML = "<b>LOC ONLY</b>";
+    } else {
+        showCountExpr(CTDQTY_Exp, EvalExprID+n);
+    }
+};
+// move to common???
+function showCountExpr(expr_fld, rslt) {
+    document.getElementById(rslt).innerHTML = "= " + EvalExpr(document.getElementById(expr_fld).value);
+};
+
+//--------------------------------
+
+MatlPhotoCarousel.addEventListener('slid.bs.carousel', event => {
+    currPhoto = {'num': event.to, 'element': event.relatedTarget};
+    document.getElementById("whichPhotoAmI").innerText = "Photo "+(currPhoto.num+1).toString()+" of {{PhotoSet|length}}"
+    });
+
+$("#modalGetPhoto").dialog({
+    autoOpen: false,
+    closeOnEscape: true,
+    modal: true,
+    hide: "puff",
+    position: {
+        my: "top center", at: "top center"
+    }
+});
+
+function delCurrPhoto() {
+    photoID = currPhoto.element.querySelector(".photo-id").value;
+    photosrc = currPhoto.element.querySelector("img").src;
+
+    $("#modalGeneric").dialog("option","title","Delete Photo?");
+    document.getElementById("modalGeneric").innerHTML = "Are you <b>sure</b> you want to delete Photo " + photosrc + " ?"
+
+    $("#modalGeneric").dialog("option","buttons",
+        {
+            "No" : function() {
+                $(this).dialog("close");
+            },
+            "Yes" : function() {
+                // set PhotoOp
+                document.getElementById("PhotoOp").value = "DEL/"+photoID
+
+                // submit form (which will submit PhotoOp)
+                start_wait_spinner();
+                document.forms['FmMain'].requestSubmit();
+
+                // $(this).dialog("close"); - don't close; the reload will clear the dialog, and seeing it reassures the user the delete is happening
+            },
+        } );
+    $("#modalGeneric").dialog("open");
+};
+function addPhoto() {
+    $("#modalGetPhoto").dialog("option","title","Add Photo for "+document.getElementById("{{frmMain.Material.id_for_label}}").value);
+    $("#modalGetPhoto").dialog("option","buttons",
+        {
+            "OK" : function() {
+                // set PhotoOp
+                document.getElementById("PhotoOp").value = "ADD"
+
+                // submit form (which will u/l and attach Photo)
+                start_wait_spinner();
+                document.forms['FmMain'].requestSubmit();
+
+                // $(this).dialog("close"); - don't close; the reload will clear the dialog, and seeing it reassures the user the add is happening
+            },
+            "Cancel" : function() {
+                $(this).dialog("close");
+            }
+        } );
+    $("#modalGetPhoto").dialog("open");
+};
+
+</script>
+{% endblock %}

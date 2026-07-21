@@ -1,34 +1,5 @@
 {% extends "cToolsFormLayout.html" %}
 
-{% block customCSS %}
-button:focus {
-    <!-- border-color:#9ecaed;   !-- convert to rgba -->
-    border-color: rgba(158, 202, 237, 1)
-    box-shadow: 0 0 5px rgba(0, 0, 255, 1);
-    -webkit-box-shadow: 0 0 5px rgba(0, 0, 255, 1); 
-    -moz-box-shadow: 0 0 5px rgba(0, 0, 255, 1);
-    border:1px solid rgba(0,0,255, 0.8); 
-}
-
-/* move to common */
-/* Core styles for your dialog box */
-.modal {
-    padding: 20px;
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    
-    /* Do NOT set display: block or display: flex here */
-}
-
-/* Optional: Style the backdrop overlay that blocks the screen */
-.modal::backdrop {
-    background-color: rgba(0, 0, 0, 0.5); /* Dim the background */
-}
-
-{% include "proposed-table-CSS.css" %}
-{% endblock %}
-
 {% block tTitle %}Count Entry{% endblock %}
 {% block formName %}Count Entry{% endblock %}
 {% block statusMsgs %}
@@ -162,7 +133,7 @@ button:focus {
 			<div class="container m-1">
 				<hr>
 				<u>All Counts for this date</u>
-				<table style="height:100px;">
+				<table class="table-scroll" style="height:100px;">
 				{% for ctRec in todayscounts %}
 					<tr>
                         {# id: 22; CountDate: 2022-07-01; Counter: Calvin; LOCATION: 868_IQC; FLAG_PossiblyNotRecieved: 0; FLAG_MovementDuringCount: 0; Material_id: 9269; LocationOnly: 0; CycCtID: ; CTD_QTY_Expr: 22; PKGID_Desc: ; TAGQTY: ; Notes: ; #}
@@ -343,6 +314,7 @@ button:focus {
             confirmLeave(YesCloseIt);
         });
 
+	{% if noSchedInfo %}
     // I don't need to check for CtDt or Material exists since button is disabled if these are missing
     document.getElementById("SchedCount").addEventListener("click",
         function() {
@@ -362,6 +334,7 @@ button:focus {
             newRec = newRec.replace("/passedCountDate","/"+dVal);
             window.open(newRec,'_blank')
         });
+    {% endif %}
 
     function processGoToReq(goDir) {
         confirmLeave(()=>loadCountEntryRec(goDir));

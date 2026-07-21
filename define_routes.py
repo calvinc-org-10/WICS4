@@ -10,10 +10,11 @@ def define_routes(flskapp):
         """Home page route."""
         return render_template('errors/404.html'), 404
 
-    @flskapp.route(app_secrets.startup_URL)
+    @flskapp.route(flskapp.config['STARTUP_URL'], methods=['GET', 'POST'])
     def startup():
         """Startup page route."""
-        return redirect(url_for('auth.login'))  # Redirect to the login page
+        # return redirect(url_for('auth.login'))  # Redirect to the login page
+        return flskapp.view_functions[flskapp.config['STARTUP_DELEGATE']]()
 
     # quite optional    
     @flskapp.route('/about')
@@ -24,11 +25,14 @@ def define_routes(flskapp):
 #################################################
 #################################################
 
-    from views.ActualCounts.frmCountEntryView import fnCountEntryView
     
     # WICS routes
     WICS_bp = Blueprint('WICS', __name__, url_prefix='/WICS')
 
+    ### CountEntryForm routes
+    #########################
+    from views.ActualCounts.frmCountEntryView import fnCountEntryView
+    
     WICS_bp.add_url_rule('/CountEntryForm', 
         view_func=fnCountEntryView, 
         methods=['GET', 'POST'], 
@@ -50,16 +54,53 @@ def define_routes(flskapp):
         defaults={'gotoCommand':'ChgKey'},
         endpoint='CountEntryForm_ChgKey'
         )
+
+    ### MaterialForm routes
+    #########################
+    from views.Material.frmMaterial import fnMaterialForm
+
+    WICS_bp.add_url_rule('/MaterialForm', 
+        view_func=fnMaterialForm, 
+        methods=['GET', 'POST'], 
+        endpoint='MaterialForm'
+        )
+    WICS_bp.add_url_rule('/MaterialForm/recnum/<int:recNum>', 
+        view_func=fnMaterialForm, 
+        methods=['GET', 'POST'], 
+        endpoint='MaterialFormRecNum'
+        )
+    WICS_bp.add_url_rule('/MaterialForm/newRec', 
+        view_func=fnMaterialForm, 
+        methods=['GET', 'POST'], 
+        defaults={'gotoRec':False, 'newRec':True},
+        endpoint='NewMaterialForm'
+        )
+    WICS_bp.add_url_rule('/MaterialForm/histcutoff/<int:recNum>/<string:HistoryCutoffDate>',
+        view_func=fnMaterialForm,
+        methods=['GET', 'POST'],
+        endpoint='MaterialFormChgHistCutoffDate'
+        )
+
     flskapp.register_blueprint(WICS_bp)
 
 #################################################
 
     # the old WICS3 Django paths
+    # path('MaterialForm',
+    #         procs_Material.fnMaterialForm, name='MatlForm'),
+    # path('MaterialForm/recnum/<int:recNum>',
+    #         procs_Material.fnMaterialForm, name='MatlFormRecNum'),
+    # path('MaterialForm/newRec',
+    #         procs_Material.fnMaterialForm, {'gotoRec':False, 'newRec':True}, name='NewMatlForm'),
+    # path('MaterialForm/histcutoff/<int:recNum>/<str:HistoryCutoffDate>',
+    #         procs_Material.fnMaterialForm, name='MatlFormChgHistCutoffDate'),
+
     # path('ActualCountList',
     #         procs_ActualCounts.ActualCountListForm.as_view(), name='ActualCountList'),
 
     # path('CountScheduleList',
     #         procs_CountSchedule.CountScheduleListForm.as_view(),name='CountScheduleList'),
+
 
     # path('CountScheduleForm',
     #         views.fnCountScheduleRecView, name='CountScheduleForm'),
@@ -101,15 +142,6 @@ def define_routes(flskapp):
     #         procs_CountSchedule.viewCountWorksheetLocReport,name='CountWorksheetLoc'),
     # path('CountWorksheetLoc/<CountDate>',
     #         procs_CountSchedule.viewCountWorksheetLocReport,name='CountWorksheetLoc'),
-
-    # path('MaterialForm',
-    #         procs_Material.fnMaterialForm, name='MatlForm'),
-    # path('MaterialForm/newRec',
-    #         procs_Material.fnMaterialForm, {'gotoRec':False, 'newRec':True}, name='NewMatlForm'),
-    # path('MaterialForm/recnum/<int:recNum>',
-    #         procs_Material.fnMaterialForm, name='MatlFormRecNum'),
-    # path('MaterialForm/histcutoff/<int:recNum>/<str:HistoryCutoffDate>',
-    #         procs_Material.fnMaterialForm, name='MatlFormChgHistCutoffDate'),
 
     # path('MPN',
     #         procs_Material.fnMPNView, name='MPNLookup'),
@@ -158,9 +190,9 @@ def define_routes(flskapp):
     SSE_bp.add_url_rule('/test-stream', view_func=test_stream)
 
     # for Update Material List progress tracking
-    from views.Materials.updtMatlList import init_UpldMatlList
+    from views.Material.updtMatlList import init_UpldMatlList
     SSE_bp.add_url_rule('/InitUpdML', view_func=init_UpldMatlList, methods=['POST'])
-    from views.Materials.updtMatlList import progress_UpdML
+    from views.Material.updtMatlList import progress_UpdML
     SSE_bp.add_url_rule('/UpdMatlLst/<reqid>', view_func=progress_UpdML)
 
     flskapp.register_blueprint(SSE_bp)

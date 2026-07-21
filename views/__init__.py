@@ -6,14 +6,14 @@ that prefer module-qualified access (for example, `views.Materials...`).
 
 from . import ActualCounts
 from . import CountSchedule
-from . import Materials
+from . import Material
 from . import SAP
 from . import misc
 
 __all__ = [
 	"ActualCounts",
 	"CountSchedule",
-	"Materials",
+	"Material",
 	"SAP",
 	"misc",
 ]

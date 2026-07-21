@@ -178,6 +178,7 @@ class Organizations(Base):
     sap_sohrecs: Mapped[list['SAP_SOHRecs']] = relationship('SAP_SOHRecs', back_populates='org')
     tmpmateriallistupdate: Mapped[list['tmpMaterialListUpdate']] = relationship('tmpMaterialListUpdate', back_populates='org')
 
+_defaultOrg = 1  # set the default organization ID, adjust as needed
 
 ##########  WAREHOUSE PART TYPES
 
@@ -544,16 +545,22 @@ class async_comm(HueyBase):
 ###########  choice lists ############
 ###############################################################################
 
-def choices_for_whseparttypes():
+def choices_for_organizations():
     from flask import current_app
     with current_app.app_context():
         session = app_db.session
-        return [(str(wpt.id), wpt.WhsePartType) for wpt in session.query(WhsePartTypes).order_by(WhsePartTypes.PartTypePriority, WhsePartTypes.WhsePartType).all()]
+        return [(str(org.id), f'{org.orgname}') for org in session.query(Organizations).order_by(Organizations.orgname).all()]
 
 def choices_for_materials():
     from flask import current_app
     with current_app.app_context():
         session = app_db.session
         return [(str(m.id), f'{m.Material}:{m.org.orgname}') for m in session.query(MaterialList).order_by(MaterialList.Material).all()]
+
+def choices_for_whseparttypes():
+    from flask import current_app
+    with current_app.app_context():
+        session = app_db.session
+        return [(str(wpt.id), wpt.WhsePartType) for wpt in session.query(WhsePartTypes).order_by(WhsePartTypes.PartTypePriority, WhsePartTypes.WhsePartType).all()]
 
 

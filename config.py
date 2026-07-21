@@ -26,6 +26,10 @@ class Config:
     APP_NEWS_HTMLFILE = 'appNews.html'
     FORMNAME_TO_URL_MAP = FormNameToURL_Map
     EXTERNAL_WEBPAGE_URL_MAP = ExternalWebPageURL_Map
+    STARTUP_URL = getattr(app_secrets, 'startup_URL', '/WICS')
+    STARTUP_DELEGATE = getattr(app_secrets, 'startup_delegate', 'auth.login')
+    
+    MTLPHOTO_FOLDER = os.environ.get('MTLPHOTO_FOLDER') or getattr(app_secrets, 'MtlPhoto_folder', 'mtl_photos')
 
     # this is a default value for new user password,
     # should be changed in production and moved to app_secrets.py or environment variable for better security

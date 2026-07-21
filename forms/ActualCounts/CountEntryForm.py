@@ -6,12 +6,6 @@ from models import ActualCounts, MaterialList, WhsePartTypes, CountSchedule, cho
 from database import Repository, app_db
 
 
-def int_or_none(value):
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return None
-
 class CountEntryForm(FlaskForm):
     id = forms.IntegerField(validators=[Optional()])
     CountDate = forms.DateField(validators=[DataRequired()])
