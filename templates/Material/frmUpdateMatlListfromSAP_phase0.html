@@ -125,14 +125,14 @@ form.addEventListener("submit", async e => {
 
     startWaitSpinner();
 
-    const res = await fetch("{{ url_for('init_UpldMatlList') }}", {
+    const res = await fetch("{{ url_for('SSE.init_UpldMatlList') }}", {
         method: "POST",
         body: new FormData(form)
     });
 
     const { job_id } = await res.json();
 
-    const eSource_tmpurl = "{{ url_for('progress_UpdML', reqid='XXJOBIDXX') }}"; // this is a template string with a placeholder for the job_id that will be replaced in the next line
+    const eSource_tmpurl = "{{ url_for('SSE.progress_UpdML', reqid='XXJOBIDXX') }}"; // this is a template string with a placeholder for the job_id that will be replaced in the next line
     const eSource_url = eSource_tmpurl.replace("XXJOBIDXX", job_id);
 
     const stream = new EventSource(eSource_url);
