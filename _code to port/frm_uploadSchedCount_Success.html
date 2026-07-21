@@ -1,0 +1,57 @@
+{% extends "WICS_common.html" %}
+{% load widget_tweaks %}
+{% load static %}
+
+{% block tTitle %}Upload Count Schedule Results{% endblock %}
+{% block formName %}Upload Count Schedule Results{% endblock %}
+
+{% block boddy %}
+    <hr>
+
+    <h4>
+        {{ nRowsRead }} spreadsheet rows read <br>
+        {{ nRowsAdded }} Count Schedule records successfully uploaded
+    </h4>
+
+    <br>
+    <ul>
+    {% for res in UplResults %}
+        <li>
+            {% if not res.error %}
+                Sprsht row {{ res.rowNum }}, 
+                Count Record {{ res.id }}: {{ res.CountDate|date:'Y-m-d '}} | {{ res.MaterialNum }} |
+                    {{ res.Counter }} | {{ res.Priority }} | {{ res.ReasonScheduled }} |
+                    added
+            {% else %}
+                <b>{{ res }}</b>
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+
+    <!-- form footer -->
+    <div class="container">
+        <div class="row mx-auto max-width=100%">
+            <div class="col-4"></div>
+            <div class="col-6"></div>
+            <div class="col">
+                <button id="close_btn" type="button" onclick="window.close();" >
+                    <img src="{% static 'stop-road-sign-icon.svg' %}" width="20" height="20"></img>
+                    Close Form
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+
+    $( document ).ready(function() {
+        // announce the results
+        speak("Your Count Schedule Spreadsheet is Processed."
+            + "  {{ nRowsRead }} spreadsheet rows were read."
+            + "  Of those, {{ nRowsAdded }} Count Schedule records were successfully added."
+        );
+    });
+
+</script>
+{% endblock %}

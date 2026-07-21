@@ -1,0 +1,47 @@
+{% extends "WICS_common.html" %}
+{% load widget_tweaks %}
+{% load static %}
+
+{% block tTitle %}Upload Count Schedule Spreadsheet{% endblock %}
+{% block formName %}Upload Count Schedule Spreadsheet{% endblock %}
+
+{% block boddy %}
+    <hr>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        Where is the Count Schedule Spreadsheet?
+        <input type="file" name="SchdFile" required id="id_SprshtFile">
+        <br><br>
+        <!-- form footer -->
+        <div class="container">
+            <div class="row mx-auto max-width=100%">
+                <div class="col-4">
+                    <button id="save_btn" type="submit">
+                        <img src="{% static 'upload-outbox-line-icon.svg' %}" width="20" height="20"></img>
+                        Upload
+                    </button>
+                </div>
+                <div class="col-6"></div>
+                <div class="col">
+                    <button id="close_btn" type="button">
+                        <img src="{% static 'stop-road-sign-icon.svg' %}" width="20" height="20"></img>
+                        Close Form
+                    </button>
+                </div>
+            </div>
+        </div>
+
+  </form>
+
+    <script>
+        document.body.onbeforeunload = function() {
+            document.getElementById("wait_spinner").style.display = "block";
+            }
+
+        document.getElementById("close_btn").addEventListener("click",
+            function(){
+                window.close();
+            });
+    </script>
+
+{% endblock %}
