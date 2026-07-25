@@ -453,13 +453,18 @@ class UnitsOfMeasure(Base):
 
 ##########  ASYNC COMM
 
-from database import HueySession
+# from database import HueySession
+def HueySession():
+    """Create a new SQLAlchemy session for Huey background tasks."""
+    from sqlalchemy.orm import sessionmaker
+    Session = sessionmaker(bind=app_db.engine)
+    return Session()
 
 class HueyBase(DeclarativeBase):
     """Base class for Huey background task models, using SQLAlchemy's DeclarativeBase."""
     pass
 class async_comm(HueyBase):
-    __tablename__ = 'async_comm'
+    __tablename__ = 'WICS_async_comm'
 
     reqid: Mapped[str] = mapped_column(String(255), primary_key=True)
     version = mapped_column(Integer, default=0)

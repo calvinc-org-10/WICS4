@@ -1,13 +1,11 @@
-{% extends "WICS_common.html" %}
-{% load widget_tweaks %}
-{% load static %}
+{% extends "cTools_common.html" %}
 
 {% block tTitle %}Update Material List from SAP MM60 Spreadsheet{% endblock %}
 {% block formName %}Update Material List Finished{% endblock %}
 
 {% block boddy %}
 <hr>
-{% csrf_token %}
+{{ dummyForm.csrf_token }}
 {% if ImpErrList %}
 <hr>
 <b>Errors:</b>
@@ -16,7 +14,7 @@
     <li>
         <b>{{ err.errmsg }}</b>
     </li>
-    {% empty %}
+    {% else %}
         <li><b>None!</b></li>
     {% endfor %}
 </ul>
@@ -27,7 +25,7 @@ Material Added:
     {% for rec in AddedMatls %}
         <li>
         id {{ rec.MaterialLink_id }} - 
-        {{ rec.org }} -
+        {{ rec.org.orgname }} -
         {{ rec.Material }} - 
         {{ rec.Description }} - 
         {{ rec.SAPMaterialType }} -
@@ -35,7 +33,7 @@ Material Added:
         {{ rec.Price }} -
         {{ rec.PriceUnit }}
         </li>
-    {% empty %}
+    {% else %}
         <li><b>None!</b></li>
     {% endfor %}
 </ul>
@@ -45,11 +43,11 @@ Material Removed:
     {% for rec in RemvdMatls %}
         <li>
         {{ rec.recStatus }} - 
-        {{ rec.org }} -
+        {{ rec.org.orgname }} -
         {{ rec.Material }} - 
         {{ rec.Description }}
         </li>
-    {% empty %}
+    {% else %}
         <li><b>None!</b></li>
     {% endfor %}
 </ul>
@@ -63,7 +61,7 @@ Material Removed:
         <div class="col-6"></div>
         <div class="col">
             <button id="close_btn" type="button">
-                <img src="{% static 'stop-road-sign-icon.svg' %}" width="20" height="20"></img>
+                <img src="{{ url_for('ctools.static', filename='stop-road-sign-icon.svg') }}" width="20" height="20"></img>
                 Close Form
             </button>
         </div>
@@ -71,37 +69,69 @@ Material Removed:
 </div>
 <script>
 
-    $( document ).ready(function() {
-        const formdata = new FormData();
-        formdata.append('phase', 'resultspresented')
-        csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        $.ajax({
-            type: 'POST', 
-            data: formdata,
-            headers: {'X-CSRFToken': csrftoken},
-            processData: false, 
-            contentType: false, 
-            success: function(data) {}
-            });
-
-        // announce the results
-        speak("The Material List is Updated from your spreadsheet."
-            + "  There were {{ ImpErrList|length }} rows with errors." 
-            + "  {{ AddedMatls|length }} Material records were added." 
-            + "  {{ RemvdMatls|length }} Material records were removed." 
-        );
-    });    
-
-    /****
-     document.body.onbeforeunload = function() {
-        document.getElementById("wait_spinner").style.display = "block";
-        }
-    ****/
-
-    document.getElementById("close_btn").addEventListener("click",
-        function(){
-            window.close();
+function initFn() {
+    const formdata = new FormData();
+    formdata.append('currentPhase', 'resultspresented')
+    formdata.append('reqid', '{{ reqid }}')
+    csrftoken = "{{ dummyForm.csrf_token.data }}";
+    /** old jQuery 
+    $.ajax({
+        type: 'POST', 
+        data: formdata,
+        headers: {'X-CSRFToken': csrftoken},
+        processData: false, 
+        contentType: false, 
+        success: function(data) {}
         });
+    **/
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken
+            // Do not set 'Content-Type' header here.
+            // Browser automatically sets it with the boundary for FormData.
+        },
+        body: formdata
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json(); // Or response.text() depending on your server data
+    })
+    .then(data => {
+        // Handle your success data here
+        console.log(data);
+    })
+    .catch(error => {
+        // Handle errors here
+        console.error('Error:', error);
+    });
+
+    // announce the results
+    speak("The Material List is Updated from your spreadsheet."
+        + "  There were {{ ImpErrList|length }} rows with errors." 
+        + "  {{ AddedMatls|length }} Material records were added." 
+        + "  {{ RemvdMatls|length }} Material records were removed." 
+    );
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFn );
+} else {
+    initFn();
+}
+
+/****
+    document.body.onbeforeunload = function() {
+    document.getElementById("wait_spinner").style.display = "block";
+    }
+****/
+
+document.getElementById("close_btn").addEventListener("click",
+    function(){
+        window.close();
+    });
 
 </script>
 

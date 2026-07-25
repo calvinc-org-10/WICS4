@@ -17,22 +17,54 @@
     <div class="container">
         <div class="row">
             <div class="col">
-                Where is the SAP Material List Spreadsheet? 
-                <p><input id="SAPFile" type="file"
-                    name="SAPFile"
-                    accept=".xlsx,application/vnd.ms-excel">
-                </input>
-                </p>
-                <p>
-                    <label for="rmvMissingMaterial">Remove Material not in Sprsht?</label>
-                    <input id="rmvMissingMaterial" type="checkbox" name="rmvMissingMaterial" value="remove-missing-material" />
-                </p>
                 <p>
                     <label for="use-local-copy">Use local copy of spreadsheet (for local dev/testing - <b>won't copy to server!</b>)</label>
                     <input id="use-local-copy" type="checkbox" name="use-local-copy" value="use-local-copy" />
                 </p>
-                {# Phs: <input id="phase" name="phase" type="text" value='init-upl' readonly></input> #}
-            </div>
+                <div id="sprsht-remote">
+                Where is the SAP Material List Spreadsheet? 
+                <p><input id="SAPFile" type="file"
+                    name="SAPFile"
+                    accept=".xlsx,application/vnd.ms-excel">
+                </input></p>
+                </div>
+                <div id="sprsht-local">
+                <p>
+                    <label for="SAPFileServerPath">Server-visible local file path (dev/test only)</label>
+                    <input id="SAPFileServerPath" type="text" name="SAPFileServerPath" placeholder="F:\\path\\to\\SAP-MM60.xlsx" />
+                </p>
+                </div>
+                <hr>
+                <div>
+                <p>
+                    <label for="rmvMissingMaterial">Remove Material not in Sprsht?</label>
+                    <input id="rmvMissingMaterial" type="checkbox" name="rmvMissingMaterial" value="remove-missing-material" />
+                </p>
+                </div>
+                <hr>
+                <div>
+                Phs: <input id="phase" name="phase" type="text" value='init-upl' readonly></input>
+                </div>
+                <div>
+                reqid: <input id="reqid" name="reqid" type="text" value='' readonly></input>
+                </div>
+
+                <hr>
+                <div>
+                Phases Completed:
+                <ul id="phases-complete">
+                </ul>
+                </div>
+
+                {# <button id="next_btn" type="submit" disabled> #}
+                <button id="next_btn" type="button" disabled>
+                    <img src="{{ url_for('ctools.static', filename='svg/upload-outbox-line-icon.svg') }}" width="20" height="20"></img>
+                    Upload
+                </button>
+                <button id="skipnext_btn" type="button" disabled>
+                Disable not implemented yet
+                </button>
+            </div>  <!-- col -->
             <div class="col">
                 <b><u>Update Existing Records if Changed:</u></b>
                 <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="Description" /> Description</label></div>
@@ -42,28 +74,24 @@
                 <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPMPN" /> SAP MPN</label></div>
                 <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPABC" /> SAP ABC Designation</label></div>
                 <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPPrice" /> Price, Price Unit and Currency</label></div>
-            </div>
-        </div>
-    </div>
+            </div>  <!-- col -->
+        </div>  <!-- row -->
+    </div>  <!-- container -->
 
     <!-- form footer -->
     <div class="container">
         <div class="row mx-auto max-width=100%">
             <div class="col-6">
-                <button id="next_btn" type="submit" disabled>
-                    <img src="{{ url_for('ctools.static', filename='svg/upload-outbox-line-icon.svg') }}" width="20" height="20"></img>
-                    Upload
-                </button>
-            </div>
+            </div>  <!-- col-6 -->
             <div class="col-4"></div>
             <div class="col">
                 <button id="close_btn" type="button">
                     <img src="{{ url_for('ctools.static', filename='svg/stop-road-sign-icon.svg') }}" width="20" height="20"></img>
                     Close Form
                 </button>
-            </div>
-        </div>
-    </div>
+            </div>  <!-- col -->
+        </div>  <!-- row -->
+    </div>  <!-- container -->
   </form>
 
 <script>
@@ -76,29 +104,201 @@ const fatalErrMsg = document.getElementById("fatalErrMsg");
 
 const waitSpinner = document.getElementById("wait_spinner");
 
-{# const phaseInput = document.getElementById("phase"); #}
+const phasesCompleteList = document.getElementById("phases-complete");
+const phaseInput = document.getElementById("phase");
+const reqidInput = document.getElementById("reqid");
 
 const sapFile = document.getElementById("SAPFile");
+const useLocalCopy = document.getElementById("use-local-copy");
+const sapFileServerPath = document.getElementById("SAPFileServerPath");
+const sprshtRemoteDiv = document.getElementById("sprsht-remote");
+const sprshtLocalDiv = document.getElementById("sprsht-local");
+
 const nextBtn = document.getElementById("next_btn");
+const skipnextBtn = document.getElementById("skipnext_btn");
 const closeBtn = document.getElementById("close_btn");
 
 const form = document.getElementById("getUpdSprsheet");
+let progressStream = null;
 
+/* ------ PHASE LIST ------ */
+/*
+const phaselist = ["init-upl", 
+    "01ReadSpreadsheet", "02IdentifyExist", "03UpdateExisting", "04Remove", "04Add",
+    "wantresults", "cleanup-after-failure", "resultspresented", "**FINAL**"
+    ];
+var currPhase = 0;
+*/
+// 1. The Immutable Enum Lookup
+const Phase = Object.freeze({
+  INIT_UPL: "init-upl",
+  READ_SPREADSHEET: "01ReadSpreadsheet",
+  IDENTIFY_EXIST: "02IdentifyExist",
+  UPDATE_EXISTING: "03UpdateExisting",
+  REMOVE: "04Remove",
+  ADD: "04Add",
+  WANT_RESULTS: "wantresults",
+  CLEANUP_FAILURE: "cleanup-after-failure",
+  RESULTS_PRESENTED: "resultspresented",
+  FINAL: "**FINAL**"
+});
+
+// 2. The Strict Order Array (Using the Enum values directly)
+const PHASE_ORDER = Object.freeze([
+  Phase.INIT_UPL,
+  Phase.READ_SPREADSHEET,
+  Phase.IDENTIFY_EXIST,
+  Phase.UPDATE_EXISTING,
+  Phase.REMOVE,
+  Phase.ADD,
+  Phase.WANT_RESULTS,
+  Phase.CLEANUP_FAILURE,
+  Phase.RESULTS_PRESENTED,
+  Phase.FINAL
+]);
+
+// 3. The State Manager Class
+class PhaseManager {
+  constructor(initialPhase = Phase.INIT_UPL) {
+    this.current = initialPhase;
+    this.showCurrentPhase();
+  }
+
+  // Get current phase
+  get() {
+    return this.current;
+  }
+
+  // Get current position index
+  get index() {
+    return PHASE_ORDER.indexOf(this.current);
+  }
+
+  // Advance by 1 step
+  next() {
+    const nextIndex = this.index + 1;
+    if (nextIndex < PHASE_ORDER.length) {
+      this.listCompletedPhase()
+      this.current = PHASE_ORDER[nextIndex];
+      this.showCurrentPhase();
+    }
+    return this.current;
+  }
+
+  // Skip directly to any specific phase safely
+  skipTo(targetPhase) {
+    if (PHASE_ORDER.includes(targetPhase)) {
+      this.listCompletedPhase()
+      this.current = targetPhase;
+      this.showCurrentPhase();
+    } else {
+      throw new Error(`Invalid phase: ${targetPhase}`);
+    }
+    return this.current;
+  }
+
+  // Check if a specific phase has already been passed
+  hasPassed(targetPhase) {
+    const targetIndex = PHASE_ORDER.indexOf(targetPhase);
+    return this.index > targetIndex;
+  }
+
+  // get the text of a specific phase
+  getPhaseText(targetPhase = this.current) {
+    if (PHASE_ORDER.includes(targetPhase)) {
+      return targetPhase;
+    } else {
+      throw new Error(`Invalid phase: ${targetPhase}`);
+    }
+  }
+  
+  // show completed phase in HTML element
+  listCompletedPhase() {
+    const element = phasesCompleteList;
+
+    if (element) {
+        const li = document.createElement("li");
+        li.textContent = this.getPhaseText(this.current);
+        phasesCompleteList.appendChild(li);
+    }
+  }
+  // show current phase in HTML element
+  showCurrentPhase() {
+    const element = phaseInput;
+
+    if (element) {
+        element.value = this.getPhaseText(this.current);
+    }
+  }
+}
+const uploadPhase = new PhaseManager();
 
 /* ---------- SIMPLE HELPERS ---------- */
 
 const startWaitSpinner = () => waitSpinner.style.display = "block";
 const stopWaitSpinner = () => waitSpinner.style.display = "none";
 
+function setFatalError(message) {
+    uploadStatus.textContent = "";
+    retStatecodeEl.textContent = "fatalerr";
+    fatalErrMsg.textContent = message;
+}
+
+function startProgressStream(reqid) {
+    if (progressStream) {
+        progressStream.close();
+    }
+
+    const eSource_tmpurl = "{{ url_for('SSE.progress_UpdML', reqid='XXJOBIDXX') }}";
+    const eSource_url = eSource_tmpurl.replace("XXJOBIDXX", reqid);
+    progressStream = new EventSource(eSource_url);
+
+    progressStream.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        uploadStatus.innerHTML = data.statetext || "";
+        retStatecodeEl.innerHTML = data.statecode || "";
+
+        if (data.statecode === "fatalerr") {
+            progressStream.close();
+            progressStream = null;
+            stopWaitSpinner();
+            setFatalError(data.statetext || "Upload failed.");
+            nextBtn.disabled = false;
+        }
+
+        if (data.statecode === "done") {
+            progressStream.close();
+            progressStream = null;
+        }
+    };
+
+    progressStream.onerror = () => {
+        progressStream.close();
+        progressStream = null;
+    };
+}
+
 
 /* ---------- DOM EVENT LISTENERS ---------- */
 
 closeBtn.addEventListener("click", () => window.close());
 
-// disable nextBtn until sapFile given
-sapFile.addEventListener('change', (event) => {
-    nextBtn.disabled = (event.currentTarget.value.length < 1);
-});
+function refreshLocalCopyMode() {
+    const localMode = useLocalCopy.checked;
+    // sapFileServerPath.disabled = !localMode;
+    sprshtLocalDiv.style.display = localMode ? 'block' : 'none';
+    sprshtRemoteDiv.style.display = localMode ? 'none' : 'block';
+
+    const hasUploadedFile = !!(sapFile.files && sapFile.files.length > 0);
+    const hasServerPath = sapFileServerPath.value.trim().length > 0;
+
+    nextBtn.disabled = localMode ? !hasServerPath : !hasUploadedFile;
+}
+
+sapFile.addEventListener('change', refreshLocalCopyMode);
+useLocalCopy.addEventListener('change', refreshLocalCopyMode);
+sapFileServerPath.addEventListener('input', refreshLocalCopyMode);
+refreshLocalCopyMode();
 
 // add listeners to the Update If Changed choices to hilight them if clicked
 const UpIfChChoices = document.querySelectorAll(".UpIfCh")
@@ -119,46 +319,63 @@ UpIfChChoices.forEach(
 
 /* ---------- async (SSE) listeners ---------- */
 
-form.addEventListener("submit", async e => {
+nextBtn.addEventListener("click", async (e) => {
 
     e.preventDefault();
 
     startWaitSpinner();
+    nextBtn.disabled = true;
+    fatalErrMsg.textContent = "";
 
-    const res = await fetch("{{ url_for('SSE.init_UpldMatlList') }}", {
-        method: "POST",
-        body: new FormData(form)
-    });
+    const currentPhase = uploadPhase.get();
 
-    const { job_id } = await res.json();
+    const senddata = new FormData(form);
+    senddata.set('currentPhase', currentPhase);
 
-    const eSource_tmpurl = "{{ url_for('SSE.progress_UpdML', reqid='XXJOBIDXX') }}"; // this is a template string with a placeholder for the job_id that will be replaced in the next line
-    const eSource_url = eSource_tmpurl.replace("XXJOBIDXX", job_id);
-
-    const stream = new EventSource(eSource_url);
-
-    stream.onmessage = e => {
-
-        const data = JSON.parse(e.data);
-
-        uploadStatus.textContent = data.statetext;
-        retStatecodeEl.textContent = data.statecode;
-
-
-        if (data.statecode === "done") {
-            stream.close();
-            window.location = `/results/${job_id}`; //FIXMEFIXMEFIXME!!
+    try {
+        const res = await fetch(window.location.href, {
+            method: "POST",
+            body: senddata
+        });
+        
+        if (!res.ok) {
+            throw new Error(`Server returned ${res.status}`);
         }
 
-        if (data.statecode === "fatalerr") {
-            stream.close();
-            stopWaitSpinner();
-            uploadStatus.textContent = "";
-            retStatecodeEl.textContent = data.statecode;
-            fatalErrMsg.textContent = data.statetext;
-            alert(data.statetext);
+        if (currentPhase === Phase.WANT_RESULTS) {
+            const html = await res.text();
+            document.open();
+            document.write(html);
+            document.close();
+            return;
         }
-    };
+
+        const phaseAnswer = await res.json();
+
+        if (phaseAnswer.statecode === "fatalerr") {
+            throw new Error(phaseAnswer.statetext || "Upload failed.");
+        }
+
+        if (currentPhase === Phase.INIT_UPL) {
+            if (!phaseAnswer.reqid) {
+                throw new Error("Server did not return reqid for upload session.");
+            }
+
+            reqidInput.value = phaseAnswer.reqid;
+            startProgressStream(phaseAnswer.reqid);
+            nextBtn.textContent = "Next";
+        }
+
+        uploadPhase.next();
+        stopWaitSpinner();
+        nextBtn.disabled = false;
+    } catch (err) {
+        stopWaitSpinner();
+        nextBtn.disabled = false;
+        const errMsg = (err && err.message) ? err.message : "Unexpected error while contacting server.";
+        setFatalError(errMsg);
+        alert(errMsg);
+    }
 
 });
 </script>

@@ -78,18 +78,12 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
         cTools_models=cTools_models,
         )
     cTools = calvincTools(appContext)
-    # (menuGroups, menuItems, cParameters, cGreetings, User) = calvincTools_init(
-    #     flskapp, 
-    #     app_db, 
-    #     cTools_tablenames=cTools_tablenames, 
-    #     cTools_models=cTools_models
-    #     ).cTools_tables
 
-    # initialize Huey
-    from database import huey_engine, set_SQLite_WAL_mode
-    set_SQLite_WAL_mode()  # set the SQLite journal mode to WAL (Write-Ahead Logging) to allow for better concurrency between the main application and the background tasks when they are both accessing the same SQLite database. This is necessary because SQLite has limited support for concurrent writes, and using WAL mode can help mitigate some of those issues by allowing multiple readers and a single writer to access the database at the same time without blocking each other as much as in the default journal mode.
-    from models import HueyBase
-    HueyBase.metadata.create_all(huey_engine)
+    # # initialize Huey
+    # from database import huey_engine, set_SQLite_WAL_mode
+    # set_SQLite_WAL_mode()  # set the SQLite journal mode to WAL (Write-Ahead Logging) to allow for better concurrency between the main application and the background tasks when they are both accessing the same SQLite database. This is necessary because SQLite has limited support for concurrent writes, and using WAL mode can help mitigate some of those issues by allowing multiple readers and a single writer to access the database at the same time without blocking each other as much as in the default journal mode.
+    # from models import HueyBase
+    # HueyBase.metadata.create_all(huey_engine)
 
     ##################################################
     ##################################################

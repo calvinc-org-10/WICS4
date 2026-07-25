@@ -1,19 +1,22 @@
 import uuid, os, re as regex, ast, json, time
+from enum import Enum
 
 from flask import (
     current_app,
     session, 
+    redirect, url_for,
     request, make_response, Response, 
     jsonify, stream_with_context,
     )
 from flask_login import login_required
+from flask_wtf import FlaskForm
 
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 from sqlalchemy.sql import select
 
 from openpyxl import load_workbook
 
-from async_tasks import huey
+# from async_tasks import huey
 
 from calvincTools.utils import (
     checkTemplate_and_render,
@@ -78,8 +81,64 @@ def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy=False):
 
     return fName
 
+def proc_MatlListSAPSprsheet_00ResolveLocalSpreadsheetPath(reqid):
+    local_path = (request.form.get('SAPFileServerPath', '') or '').strip()
+
+    if not local_path:
+        statetext = 'No server file path provided for local copy mode.'
+        async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'fatalerr',
+            statetext = statetext,
+            result = 'FAIL - missing local path',
+            )
+        raise FatalUploadError(statetext)
+
+    if not os.path.isabs(local_path):
+        statetext = f'Local spreadsheet path must be absolute: {local_path}'
+        async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'fatalerr',
+            statetext = statetext,
+            result = 'FAIL - non-absolute local path',
+            )
+        raise FatalUploadError(statetext)
+
+    if not os.path.exists(local_path):
+        statetext = f'Local spreadsheet file not found: {local_path}'
+        async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'fatalerr',
+            statetext = statetext,
+            result = 'FAIL - local path not found',
+            )
+        raise FatalUploadError(statetext)
+
+    if os.path.isdir(local_path):
+        statetext = f'Local spreadsheet path points to a directory, not a file: {local_path}'
+        async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'fatalerr',
+            statetext = statetext,
+            result = 'FAIL - local path is a directory',
+            )
+        raise FatalUploadError(statetext)
+
+    _, ext = os.path.splitext(local_path)
+    if ext.lower() != ExcelWorkbook_fileext.lower():
+        statetext = f'Local spreadsheet must be an {ExcelWorkbook_fileext} file: {local_path}'
+        async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'fatalerr',
+            statetext = statetext,
+            result = 'FAIL - invalid local file extension',
+            )
+        raise FatalUploadError(statetext)
+
+    return local_path
+
 # @huey.context_task(thisapp.app_context())
-def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
+def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName, cleanup_file=True):
     acomm = async_comm.set_async_comm_state(
         reqid,
         statecode = 'rdng-sprsht',
@@ -133,7 +192,8 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
             )
 
         wb.close()
-        os.remove(fName)
+        if cleanup_file and os.path.exists(fName):
+            os.remove(fName)
         raise FatalUploadError(statetext)
 
     numrows = ws.max_row
@@ -178,7 +238,8 @@ def proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, fName):
     # endfor
 
     wb.close()
-    os.remove(fName)
+    if cleanup_file and os.path.exists(fName):
+        os.remove(fName)
 
     # report done and move to next step
     statecode = getattr(async_comm.get_async_comm_state(reqid), 'statecode', 'fatalerr')                 # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to fatalerr if we can't get the statecode
@@ -216,29 +277,32 @@ def proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid):
     app_db.session.execute(text(UpdMaterialLinkSQL))
     app_db.session.commit()
 
-    async_comm.set_async_comm_state(
-        reqid,
-        statecode = 'id-del-matl',
-        statetext = f'Identifying WICS Materials no longer in SAP MM60 Materials',
-        )
-    MustKeepMatlsSelCond = ''
-    MustKeepMatlsSelCond += ' AND ' if MustKeepMatlsSelCond else ''
-    MustKeepMatlsSelCond += 'id NOT IN (SELECT DISTINCT tmucopy.MaterialLink_id AS Material_id FROM WICS_tmpmateriallistupdate tmucopy WHERE tmucopy.MaterialLink_id IS NOT NULL)'
-    MustKeepMatlsSelCond += ' AND ' if MustKeepMatlsSelCond else ''
-    MustKeepMatlsSelCond += 'id NOT IN (SELECT DISTINCT Material_id FROM WICS_actualcounts)'
-    MustKeepMatlsSelCond += ' AND ' if MustKeepMatlsSelCond else ''
-    MustKeepMatlsSelCond += 'id NOT IN (SELECT DISTINCT Material_id FROM WICS_countschedule)'
-    MustKeepMatlsSelCond += ' AND ' if MustKeepMatlsSelCond else ''
-    MustKeepMatlsSelCond += 'id NOT IN (SELECT DISTINCT Material_id FROM WICS_sap_sohrecs)'
+    rmvMissingMaterial = getattr(async_comm.get_async_comm_state(f"{reqid}-RmvMissingMatl"), 'statetext', 'False')
+    if rmvMissingMaterial in ['True', True]:
+        async_comm.set_async_comm_state(
+            reqid,
+            statecode = 'id-del-matl',
+            statetext = f'Identifying WICS Materials no longer in SAP MM60 Materials',
+            )
+        MustKeepMatlsSelCond = ''
+        MustKeepMatlsSelCond += ' AND ' if MustKeepMatlsSelCond else ''
+        MustKeepMatlsSelCond += 'id NOT IN (SELECT DISTINCT tmucopy.MaterialLink_id AS Material_id FROM WICS_tmpmateriallistupdate tmucopy WHERE tmucopy.MaterialLink_id IS NOT NULL)'
+        MustKeepMatlsSelCond += ' AND ' if MustKeepMatlsSelCond else ''
+        MustKeepMatlsSelCond += 'id NOT IN (SELECT DISTINCT Material_id FROM WICS_actualcounts)'
+        MustKeepMatlsSelCond += ' AND ' if MustKeepMatlsSelCond else ''
+        MustKeepMatlsSelCond += 'id NOT IN (SELECT DISTINCT Material_id FROM WICS_countschedule)'
+        MustKeepMatlsSelCond += ' AND ' if MustKeepMatlsSelCond else ''
+        MustKeepMatlsSelCond += 'id NOT IN (SELECT DISTINCT Material_id FROM WICS_sap_sohrecs)'
 
-    DeleteMatlsSelectSQL = "INSERT INTO WICS_tmpmateriallistupdate (recStatus, delMaterialLink, MaterialLink_id, org_id, Material, Description, Plant "
-    DeleteMatlsSelectSQL += ", SAPMaterialType, SAPMaterialGroup, Currency  ) "    # these can go once I set null=True on these fields
-    DeleteMatlsSelectSQL += " SELECT  concat('DEL ',FORMAT(id,0)), id, NULL, org_id, Material, Description, Plant "
-    DeleteMatlsSelectSQL += ", SAPMaterialType, SAPMaterialGroup, Currency  "    # these can go once I set null=True on these fields
-    DeleteMatlsSelectSQL += " FROM WICS_materiallist"
-    DeleteMatlsSelectSQL += f" WHERE ({MustKeepMatlsSelCond})"
-    app_db.session.execute(text(DeleteMatlsSelectSQL))
-    app_db.session.commit()
+        DeleteMatlsSelectSQL = "INSERT INTO WICS_tmpmateriallistupdate (recStatus, delMaterialLink, MaterialLink_id, org_id, Material, Description, Plant "
+        DeleteMatlsSelectSQL += ", SAPMaterialType, SAPMaterialGroup, Currency  ) "    # these can go once I set null=True on these fields
+        DeleteMatlsSelectSQL += " SELECT  concat('DEL ',FORMAT(id,0)), id, NULL, org_id, Material, Description, Plant "
+        DeleteMatlsSelectSQL += ", SAPMaterialType, SAPMaterialGroup, Currency  "    # these can go once I set null=True on these fields
+        DeleteMatlsSelectSQL += " FROM WICS_materiallist"
+        DeleteMatlsSelectSQL += f" WHERE ({MustKeepMatlsSelCond})"
+        app_db.session.execute(text(DeleteMatlsSelectSQL))
+        app_db.session.commit()
+    # end if rmvMissingMaterial in ('True', True)
 
     async_comm.set_async_comm_state(
         reqid,
@@ -316,12 +380,10 @@ def proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid):
 
 # @huey.context_task(thisapp.app_context())
 def proc_MatlListSAPSprsheet_04_Remove(reqid):
-    ## MustKeepMatlsDelCond = ''
-    ## if MustKeepMatlsDelCond: MustKeepMatlsDelCond += ' AND '
-    ## MustKeepMatlsDelCond += 'id IN (SELECT DISTINCT delMaterialLink FROM WICS_tmpmateriallistupdate WHERE recStatus like "DEL%")'
+# temporarily skipped ...
 
     doRmv_str = getattr(async_comm.get_async_comm_state(f"{reqid}-RmvMissingMatl"), 'statetext', 'False')
-    doRmv = ast.literal_eval(doRmv_str)
+    doRmv = doRmv_str in [True, 'True'] # ast.literal_eval(doRmv_str)
 
     if not doRmv:
         async_comm.set_async_comm_state(
@@ -441,8 +503,14 @@ def proc_MatlListSAPSprsheet_99_FinalProc(reqid):
     
 def proc_MatlListSAPSprsheet_99_Cleanup(reqid):
     # also kill reqid, acomm, qcluster process
-    async_comm.delete_async_comm(reqid)
-    async_comm.delete_async_comm(f"{reqid}-UpdExstFldList")
+    keylist = [
+        reqid, 
+        f"{reqid}-UpdExstFldList",
+        f"{reqid}-RmvMissingMatl",
+        f"MatlX{reqid}",
+        ]
+    for key in keylist:
+        async_comm.delete_async_comm(key)
 
     # when we can start django-q programmatically, this is where we kill that process
     # Huey is being run as always-on, so no need to kill it
@@ -460,24 +528,32 @@ def proc_MatlListSAPSprsheet_99_Cleanup(reqid):
     app_db.session.query(tmpMaterialListUpdate).delete(synchronize_session=False)
     app_db.session.commit()
 
+class PhaseEnum(Enum):
+    INIT_UPL = "init-upl"
+    READ_SPREADSHEET = "01ReadSpreadsheet"
+    IDENTIFY_EXIST = "02IdentifyExist"
+    UPDATE_EXISTING = "03UpdateExisting"
+    REMOVE = "04Remove"
+    ADD = "04Add"
+    WANT_RESULTS = "wantresults"
+    CLEANUP_FAILURE = "cleanup-after-failure"
+    RESULTS_PRESENTED = "resultspresented"
+    FINAL = "**FINAL**"
+# PhaseEnum
+
+@login_required
+def fnUpdateMatlListfromSAP_init():
+    return redirect(url_for('WICS.UpdateMatlListfromSAP'))
+
 @login_required
 def fnUpdateMatlListfromSAP():
 
-    client_phase = request.form.get('phase', None)
-    reqid = request.cookies.get('reqid', None)  # where's thee reqid kept?  # eventually, delete the use of cookies for this and just pass the reqid back and forth in the request body or something; using cookies was just a quick way to get it working without having to change the frontend code much, but it's not ideal since it relies on the client to keep track of the reqid correctly and send it back with each request, which could lead to issues if the client doesn't do that correctly.  Passing the reqid back and forth in the request body would be more reliable and easier to manage, but would require changes to the frontend code to include the reqid in each request.
+    client_phase = request.form.get('currentPhase', None)
+    client_phaseEnum = PhaseEnum(client_phase) if client_phase is not None else None
+    reqid = request.form.get('reqid', None)  
 
     if request.method == 'POST':
-        # check if the mandatory commits have been done and change the status code if so
-        if reqid is not None:
-            mandatory_commit_key = f'MatlX{reqid}'
-            mandatory_commit_list = ['03A', '03D']
-            if async_comm.async_comm_exists(mandatory_commit_key):
-                mandatory_commits_recorded = async_comm.get_async_comm_state(mandatory_commit_key).statecode # type: ignore
-                if all((c in str(mandatory_commits_recorded)) for c in mandatory_commit_list):
-                    proc_MatlListSAPSprsheet_99_FinalProc(reqid)
-                    async_comm.delete_async_comm(mandatory_commit_key)
-
-        if client_phase=='init-upl':
+        if   client_phaseEnum == PhaseEnum.INIT_UPL:
             # start Huey consumer (or at least make sure it's running) and save the pid in a cookie so we can kill it later in the cleanup proc.  When we can start Huey programmatically, this is where we start it and get the pid.
             # reqid = subprocess.Popen(
                 # ['python', f'huey_consumer.py', 'app.huey -w 4']
@@ -489,48 +565,86 @@ def fnUpdateMatlListfromSAP():
                 reqid = uuid.uuid4()
 
             UpdateExistFldList = request.form.getlist('UpIfCh')
-            proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList)
+            rmvMissingMaterial = (request.form.get('rmvMissingMaterial', False) == 'remove-missing-material')
+            proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList, rmvMissingMaterial)
+            
+            retinfo = make_response(jsonify(reqid=str(reqid)))
+            return retinfo
 
-            if request.form.get('use-local-copy', False) == 'use-local-copy':
-                UMLSSName = request.files.get('SAPFile').filename # type: ignore
+        elif client_phaseEnum == PhaseEnum.READ_SPREADSHEET:
+            use_local_copy = request.form.get('use-local-copy', False) == 'use-local-copy'
+            if use_local_copy:
+                UMLSSName = proc_MatlListSAPSprsheet_00ResolveLocalSpreadsheetPath(reqid)
             else:
                 UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid)
             #endif use local copy
-            proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, UMLSSName)
+            proc_MatlListSAPSprsheet_01ReadSpreadsheet(reqid, UMLSSName, cleanup_file=not use_local_copy)
 
             acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
-            retinfo = make_response(jsonify(acomm))
-            # retinfo.set_cookie('reqid',str(reqid))
+            acomm_dict = None if acomm is None else {c.key: getattr(acomm, c.key) for c in inspect(acomm).mapper.column_attrs}
+            retinfo = make_response(jsonify(acomm_dict))
             return retinfo
-        elif client_phase=='waiting':
+        elif client_phaseEnum == PhaseEnum.IDENTIFY_EXIST:
+            proc_MatlListSAPSprsheet_02_identifyexistingMaterial(reqid)
+            
             acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
-            retinfo = make_response(jsonify(acomm))
+            acomm_dict = None if acomm is None else {c.key: getattr(acomm, c.key) for c in inspect(acomm).mapper.column_attrs}
+            retinfo = make_response(jsonify(acomm_dict))
             return retinfo
-        elif client_phase=='wantresults':
+        elif client_phaseEnum == PhaseEnum.UPDATE_EXISTING:
+            proc_MatlListSAPSprsheet_03_UpdateExistingRecs(reqid)
+            
+            acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
+            acomm_dict = None if acomm is None else {c.key: getattr(acomm, c.key) for c in inspect(acomm).mapper.column_attrs}
+            retinfo = make_response(jsonify(acomm_dict))
+            return retinfo
+        elif client_phaseEnum == PhaseEnum.REMOVE:
+            # skip removals for now; just go straight to the adds
+            # proc_MatlListSAPSprsheet_04_Remove(reqid)
+            
+            acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
+            acomm_dict = None if acomm is None else {c.key: getattr(acomm, c.key) for c in inspect(acomm).mapper.column_attrs}
+            retinfo = make_response(jsonify(acomm_dict))
+            return retinfo
+        elif client_phaseEnum == PhaseEnum.ADD:
+            proc_MatlListSAPSprsheet_04_Add(reqid)
+            
+            acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
+            acomm_dict = None if acomm is None else {c.key: getattr(acomm, c.key) for c in inspect(acomm).mapper.column_attrs}
+            retinfo = make_response(jsonify(acomm_dict))
+            return retinfo
+        elif client_phaseEnum == PhaseEnum.WANT_RESULTS:
+            proc_MatlListSAPSprsheet_99_FinalProc(reqid)
+            # async_comm.delete_async_comm(mandatory_commit_key)
+            
             stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus.startswith('err'))
-            ImpErrList = app_db.session.execute(stmt).mappings().all()
+            ImpErrList = app_db.session.execute(stmt).scalars().all()
             stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus=='ADD')
-            AddedMatlsList = app_db.session.execute(stmt).mappings().all()
+            AddedMatlsList = app_db.session.execute(stmt).scalars().all()
             stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus.startswith('DEL'))
-            RemvdMatlsList = app_db.session.execute(stmt).mappings().all()
+            RemvdMatlsList = app_db.session.execute(stmt).scalars().all()
             cntext = {
+                'dummyForm': FlaskForm(),       # for getting csrf_token
+                'reqid': reqid,
                 'ImpErrList':ImpErrList,
                 'AddedMatls':AddedMatlsList,
                 'RemvdMatls':RemvdMatlsList,
                 }
             templt = 'Material/frmUpdateMatlListfromSAP_done.html'
-            return checkTemplate_and_render(templt, cntext)
-        elif client_phase=='cleanup-after-failure':
-            pass
-        elif client_phase=='resultspresented':
+            ## will this work??
+            return checkTemplate_and_render(templt, **cntext)
+        elif client_phaseEnum == PhaseEnum.CLEANUP_FAILURE:
             proc_MatlListSAPSprsheet_99_Cleanup(reqid)
-            retinfo = make_response(jsonify(success=True))
-            # retinfo.delete_cookie('reqid')
-
-            return retinfo
+            return make_response(jsonify(status='cleanup-complete', reqid=str(reqid)))
+        elif client_phaseEnum == PhaseEnum.RESULTS_PRESENTED:
+            proc_MatlListSAPSprsheet_99_Cleanup(reqid)
+            return make_response(jsonify(status='results-presented', reqid=str(reqid)))
+        elif client_phaseEnum == PhaseEnum.FINAL:
+            return make_response(jsonify(status='final', reqid=str(reqid)))
         else:
-            return
-        #endif client_phase
+            return make_response(jsonify(error=f'Unknown client_phase: {client_phase}'), 400)
+        # endif client_phase
+
     else:   # req.method != 'POST'
         # (hopefully,) this is the initial phase; all others will be part of a POST request
 
@@ -542,60 +656,33 @@ def fnUpdateMatlListfromSAP():
     #endif req.method = 'POST'
 # fnunUpdateMatlListfromSAP
 
-def init_UpldMatlList():
-    reqid = str(uuid.uuid4())
-    while async_comm.async_comm_exists(reqid):
-        reqid = str(uuid.uuid4())
+# def init_UpldMatlList():
+#     reqid = str(uuid.uuid4())
+#     while async_comm.async_comm_exists(reqid):
+#         reqid = str(uuid.uuid4())
 
-    UpdateExistFldList = request.form.getlist('UpIfCh')
-    rmvMissingMaterial = (request.form.get('rmvMissingMaterial', False) == 'remove-missing-material')
-    proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList, rmvMissingMaterial)
+#     UpdateExistFldList = request.form.getlist('UpIfCh')
+#     rmvMissingMaterial = (request.form.get('rmvMissingMaterial', False) == 'remove-missing-material')
+#     proc_MatlListSAPSprsheet_00InitUMLasync_comm(reqid, UpdateExistFldList, rmvMissingMaterial)
 
-    uselocalCopy = (request.form.get('use-local-copy', False) == 'use-local-copy')
-    UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy)
+#     uselocalCopy = (request.form.get('use-local-copy', False) == 'use-local-copy')
+#     UMLSSName = proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy)
 
-    pipeline = (
-        proc_MatlListSAPSprsheet_01ReadSpreadsheet.s(reqid, UMLSSName)
-        .then(proc_MatlListSAPSprsheet_02_identifyexistingMaterial.s())
-        .then(proc_MatlListSAPSprsheet_03_UpdateExistingRecs.s())
-        .then(proc_MatlListSAPSprsheet_04_Remove.s())
-        .then(proc_MatlListSAPSprsheet_04_Add.s())
-        )
-    huey.enqueue(pipeline)
+#     pipeline = (
+#         proc_MatlListSAPSprsheet_01ReadSpreadsheet.s(reqid, UMLSSName)
+#         .then(proc_MatlListSAPSprsheet_02_identifyexistingMaterial.s())
+#         .then(proc_MatlListSAPSprsheet_03_UpdateExistingRecs.s())
+#         .then(proc_MatlListSAPSprsheet_04_Remove.s())
+#         .then(proc_MatlListSAPSprsheet_04_Add.s())
+#         )
+#     huey.enqueue(pipeline)
     
 
-    acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
-    # retinfo = make_response(jsonify(reqid))
-    # return retinfo
-    return {"job_id": reqid}
-# init_UpldMatlList
-
-# @app.get("/SSE/ENDUpdMatlLst/<reqid>")
-def closeup_UpldMatlList(reqid):
-    ...
-        # elif client_phase=='wantresults':
-        #     stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus.startswith('err'))
-        #     ImpErrList = app_db.session.execute(stmt).mappings().all()
-        #     stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus=='ADD')
-        #     AddedMatlsList = app_db.session.execute(stmt).mappings().all()
-        #     stmt = select(tmpMaterialListUpdate).where(tmpMaterialListUpdate.recStatus.startswith('DEL'))
-        #     RemvdMatlsList = app_db.session.execute(stmt).mappings().all()
-        #     cntext = {
-        #         'ImpErrList':ImpErrList,
-        #         'AddedMatls':AddedMatlsList,
-        #         'RemvdMatls':RemvdMatlsList,
-        #         }
-        #     templt = 'Material/frmUpdateMatlListfromSAP_done.html'
-        #     return checkTemplate_and_render(templt, cntext)
-        # elif client_phase=='cleanup-after-failure':
-        #     pass
-        # elif client_phase=='resultspresented':
-        #     proc_MatlListSAPSprsheet_99_Cleanup(reqid)
-        #     retinfo = make_response(jsonify(success=True))
-        #     # retinfo.delete_cookie('reqid')
-
-        #     return retinfo
-# closeup_UpldMatlList
+#     acomm = async_comm.get_async_comm_state(reqid)    # something's very wrong if this doesn't exist
+#     # retinfo = make_response(jsonify(reqid))
+#     # return retinfo
+#     return {"job_id": reqid}
+# # init_UpldMatlList
 
 # from database import HueySession
 # @app.get("/SSE/UpdMatlLst/<reqid>")
@@ -638,10 +725,4 @@ def progress_UpdML(reqid):
 
     return r
 
-def PLACEHOLDER_fnUpdateMatlListfromSAP():
-    # This is a placeholder for the function that will update the material list from SAP.
-    # The actual implementation will depend on how you plan to connect to SAP and retrieve the data.
-    # For now, it simply returns a message indicating that the function was called. You can replace this with the actual logic to update the material list from SAP.
-    return "Material list update from SAP function called."
-# fnUpdateMatlListfromSAP
 

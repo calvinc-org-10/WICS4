@@ -81,6 +81,17 @@ def define_routes(flskapp):
         endpoint='MaterialFormChgHistCutoffDate'
         )
 
+
+    # this will start the huey pipeline
+    ### UpdateMatlListfromSAP routes
+    ###################################
+    from views.Material.updtMatlList import fnUpdateMatlListfromSAP
+    WICS_bp.add_url_rule('/UpdateMatlListfromSAP',
+        view_func=fnUpdateMatlListfromSAP,      #type: ignore
+        methods=['GET', 'POST'], 
+        endpoint='UpdateMatlListfromSAP'
+        )
+
     flskapp.register_blueprint(WICS_bp)
 
 #################################################
@@ -190,8 +201,9 @@ def define_routes(flskapp):
     SSE_bp.add_url_rule('/test-stream', view_func=test_stream)
 
     # for Update Material List progress tracking
-    from views.Material.updtMatlList import init_UpldMatlList
-    SSE_bp.add_url_rule('/InitUpdML', view_func=init_UpldMatlList, methods=['POST'])
+    # from views.Material.updtMatlList import init_UpldMatlList
+    # this will start the huey pipeline
+    # SSE_bp.add_url_rule('/InitUpdML', view_func=init_UpldMatlList, methods=['POST'])
     from views.Material.updtMatlList import progress_UpdML
     SSE_bp.add_url_rule('/UpdMatlLst/<reqid>', view_func=progress_UpdML)
 

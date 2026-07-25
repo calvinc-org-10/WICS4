@@ -237,6 +237,6 @@ def fnCountEntryView(
             'changes_saved': changes_saved,
             'changed_data': chgd_dat,
             }
-    templt = 'frm_CountEntry.html'
+    templt = 'ActualCounts/frm_CountEntry.html'
     return checkTemplate_and_render(templt, **cntext)
 
