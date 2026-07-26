@@ -97,5 +97,5 @@ def create_app(config_name=app_secrets.config_to_use):  # type: ignore
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=getattr(app_secrets,'FlaskDebug', False))
 
