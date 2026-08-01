@@ -65,7 +65,6 @@
     {% if frmMain.errors %}{{ frmMain.errors }}{% endif %}
 
     {# django does this field wrong - when it presents it as a <select>, it makes the selected value the initial value, not the actual #}
-    <input type="hidden" name="material-org" id="id_material-org" value="{{ frmMain.org_id.data }}">
     <hr>
 
     <!-- main part of form -->
@@ -74,7 +73,7 @@
             <div class="col-10">
                 <div class="row">
                     <div class="col-8">
-                        {{ frmMain.org }}
+                        {{ frmMain.org_id }}
                         Material: {{ frmMain.Material(size="15") }}
                         Description: {{ frmMain.Description(size="40") }}
                         <input type="hidden" name="OrigMaterial" value="{{ frmMain.Material.data }}"></input>

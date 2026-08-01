@@ -370,20 +370,20 @@ def fnMaterialForm(recNum = -1, gotoRec=False, newRec=False, HistoryCutoffDate=N
     ]
 
     cntext = {
-            'frmMain': mainFm,
-            'PhotoSet': PhotoSet, 
-            'userReadOnly': current_user.has_permission('WICS.Material_onlyview') and not current_user.has_permission('WICS.SuperUser'),
-            'lastFoundAt': LastFA,
-            'FoundAt': FoundAt,
-            'gotoForm': gotoForm,
-            'countset': mainFm.subforms['counts'],
-            'scheduleset': mainFm.subforms['schedule'],
-            'countsummset': summaryFormSet,
-            'MPNset': mainFm.subforms['MfrPN'],
-            'SAPSet': SAP_SOH,
-            'changes_saved': changes_saved,
-            'changed_data': chgd_dat,
-            }
+        'frmMain': mainFm,
+        'PhotoSet': PhotoSet, 
+        'userReadOnly': current_user.has_permission('WICS.Material_onlyview') and not current_user.has_permission('WICS.SuperUser'),
+        'lastFoundAt': LastFA,
+        'FoundAt': FoundAt,
+        'gotoForm': gotoForm,
+        'countset': mainFm.subforms['counts'],
+        'scheduleset': mainFm.subforms['schedule'],
+        'countsummset': summaryFormSet,
+        'MPNset': mainFm.subforms['MfrPN'],
+        'SAPSet': SAP_SOH,
+        'changes_saved': changes_saved,
+        'changed_data': chgd_dat,
+        }
     
     return checkTemplate_and_render(templt, **cntext)
 
