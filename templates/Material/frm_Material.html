@@ -446,8 +446,10 @@
     </div>
 </form>
 
+{#
 <div id="modalGeneric" class="modal">
 </div>
+#}
 
 <div id="modalGetPhoto" class="modal">
     Select the photo to upload
@@ -613,19 +615,11 @@ function isValid_Material() {
 }
 
 //------------------
-
 function processGoToReq() {
     if (!isValid_Material()) {
         if (_gotoTextBox.value != "") {
-            $("#modalGeneric").dialog("option","title","Invalid Material");
-            document.getElementById("modalGeneric").innerHTML = _gotoTextBox.value + " is not a valid Material number"
-
-            $("#modalGeneric").dialog("option","buttons",
-                {
-                    "OK" : function() {
-                        $(this).dialog("close"); }
-                } );
-            $("#modalGeneric").dialog("open");
+            modalBox = cToolsModal1("Invalid Material", _gotoTextBox.value + " is not a valid Material number");
+            modalBox.show();
             }
         _gotoTextBox.focus();
         return;
@@ -638,20 +632,16 @@ function isFormChanged() {
     return !(initialState === currState);
 };
 
+
 function confirmLeave(LeaveProc){
     if (isFormChanged()) {
-        $("#modalGeneric").dialog("option","title","Leave Record?");
-        document.getElementById("modalGeneric").innerHTML = "This record has changed<br>Do you really want to leave without saving?"
-
-        $("#modalGeneric").dialog("option","buttons",
-            {
-                "Yes": function() {
-                    LeaveProc();
-                    $(this).dialog("close"); },
-                "No" : function() {
-                    $(this).dialog("close"); }
-            } );
-        $("#modalGeneric").dialog("open");
+        modalBox = cToolsModal1(
+            "Leave Record?",
+            "This record has changed<br>Do you really want to leave without saving?",
+            ["yes", "no"]
+            );
+        modalBox.ctBtnYes.addEventListener("click", LeaveProc);
+        modalBox.show()
     } else {
         LeaveProc();
     }
@@ -659,6 +649,7 @@ function confirmLeave(LeaveProc){
 
 //------------------
 
+{#  convert this code from jQuery to plain JS
 function CopyCount(n) {
     const newdateid = "newcopy-date";
     const todayDate = new Date();   // I STILL hate date manipulation!! Can't we all just agree on a standard???
@@ -696,20 +687,6 @@ function CopyCount(n) {
     $("#modalGeneric").dialog("open");
 
 };
-
-//------------------
-
-{#
-// handle Modal
-$("#modalGeneric").dialog({
-    autoOpen: false,
-    closeOnEscape: false,
-    modal: true,
-    hide: "puff",
-    position: {
-        my: "top center", at: "top center"
-    }
-});
 #}
 
 //------------------
@@ -749,6 +726,7 @@ $("#modalGetPhoto").dialog({
 });
 #}
 
+{# convert from jQuery
 function delCurrPhoto() {
     photoID = currPhoto.element.querySelector(".photo-id").value;
     photosrc = currPhoto.element.querySelector("img").src;
@@ -794,6 +772,6 @@ function addPhoto() {
         } );
     $("#modalGetPhoto").dialog("open");
 };
-
+#}
 </script>
 {% endblock %}

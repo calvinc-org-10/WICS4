@@ -27,7 +27,7 @@ from forms.Material.MaterialForm import (
     )
 from models import (
     MaterialList, MaterialPhotos, 
-    WhsePartTypes, 
+    WhsePartTypes, Organizations,
     ActualCounts, CountSchedule, 
     MfrPNtoMaterial, 
     SAP_SOHRecs, UnitsOfMeasure,
@@ -242,12 +242,14 @@ def fnMaterialForm(recNum = -1, gotoRec=False, newRec=False, HistoryCutoffDate=N
         SAP_SOH = fnSAPList(matl=currRec)
     # SAP_SOH = fnSAPList(matl=currRec)
 
+    if currRec.org is None: 
+        currRec.org = app_db.session.get(Organizations, _defaultOrg)  # assign default org if none
     gotoForm = {
         'choicelist': [
             SimpleNamespace(id=rec.id, Material_org=f'{rec.Material}:{rec.org.orgname}') 
                 for rec in app_db.session.query(MaterialList).all()
             ],
-        'gotoItem': f'{currRec.Material}:{currRec.org.orgname}' if currRec else '',
+        'gotoItem': f'{currRec.Material}:{currRec.org.orgname}' if currRec.org else '',
     }
 
     # count summary subform
