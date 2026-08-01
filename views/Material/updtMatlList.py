@@ -1,12 +1,11 @@
-import uuid, os, re as regex, ast, json, time
+import uuid, os, re as regex, ast
 from enum import Enum
 
 from flask import (
     current_app,
     session, 
     redirect, url_for,
-    request, make_response, Response, 
-    jsonify, stream_with_context,
+    request, make_response, jsonify,
     )
 from flask_login import login_required
 from flask_wtf import FlaskForm
@@ -23,8 +22,6 @@ from calvincTools.utils import (
     ExcelWorkbook_fileext,
     )
 
-from calvincTools.models import (cParameters, )
-from app import app as thisapp
 from database import (app_db,)
 from models import (
     tmpMaterialListUpdate, SAPPlants_org,
@@ -75,7 +72,8 @@ def proc_MatlListSAPSprsheet_00CopyUMLSpreadsheet(reqid, uselocalCopy=False):
             result = 'FAIL - no file uploaded',
             )
         return
-    svdir = cParameters.get_parameter('SAP-FILELOC') if not uselocalCopy else ''
+    svdir = current_app.config.get('SAP_FILELOC', os.getcwd()) if not uselocalCopy else ''
+    os.makedirs(svdir, exist_ok=True)    
     fName = svdir+"tmpMatlList"+str(reqid)+ExcelWorkbook_fileext
     SAPFile.save(fName)
 
@@ -502,6 +500,7 @@ def proc_MatlListSAPSprsheet_99_FinalProc(reqid):
         )
     
 def proc_MatlListSAPSprsheet_99_Cleanup(reqid):
+
     # also kill reqid, acomm, qcluster process
     keylist = [
         reqid, 
@@ -631,7 +630,6 @@ def fnUpdateMatlListfromSAP():
                 'RemvdMatls':RemvdMatlsList,
                 }
             templt = 'Material/frmUpdateMatlListfromSAP_done.html'
-            ## will this work??
             return checkTemplate_and_render(templt, **cntext)
         elif client_phaseEnum == PhaseEnum.CLEANUP_FAILURE:
             proc_MatlListSAPSprsheet_99_Cleanup(reqid)
@@ -686,43 +684,4 @@ def fnUpdateMatlListfromSAP():
 
 # from database import HueySession
 # @app.get("/SSE/UpdMatlLst/<reqid>")
-def progress_UpdML(reqid):
-
-    def generate():
-        last_version = 0
-
-        while True:
-            # session = HueySession()
-
-            row = async_comm.get_async_comm_state(reqid)    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to None if we can't get the record
-
-            if row and row.version > last_version:
-
-                payload = json.dumps({
-                    "statecode": row.statecode,
-                    "statetext": row.statetext
-                })  #should I dump the whole record here instead of just statecode and statetext?  Maybe not a good idea if there are big text fields or something, but it would be more flexible for the frontend if it had access to all the fields without me having to predict which ones it might want.  For now, I'll just include statecode and statetext since those are the ones I know the frontend will need, and I can always add more later if needed.
-
-                yield f"data: {payload}\n\n"
-
-                last_version = row.version
-
-                if row.statecode == "done":
-                    break
-
-            # session.close()
-
-            yield ": keepalive\n\n"
-
-            time.sleep(1)
-        # endwhile (until we break on statecode == "done")
-    # generate
-
-    r = Response(stream_with_context(generate()),
-                 mimetype="text/event-stream")
-
-    r.headers["X-Accel-Buffering"] = "no"
-
-    return r
-
 

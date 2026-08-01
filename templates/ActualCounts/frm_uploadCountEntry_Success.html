@@ -1,0 +1,110 @@
+{% extends "cTools_common.html" %}
+
+{% block tTitle %}Upload CountEntry Results{% endblock %}
+{% block formName %}Upload CountEntry Results{% endblock %}
+
+{% block boddy %}
+    <h4>
+        {{ ResultStats.nRowsRead }} spreadsheet rows read <br>
+        {{ ResultStats.nRowsNoMaterial }} rows skipped (no Material given or WICSIgnore set) <br> 
+        {{ ResultStats.nRowsErrors }}  rows with errors <br>
+        {{ ResultStats.nRowsAdded }} Count Entry records successfully uploaded <br>
+    </h4>
+
+    <ul>
+    {% for res in UplResults %}
+        <li>
+    {###
+    errState = models.CharField(max_length=100, null=True)
+    errmsg = models.CharField(max_length=512, null=True)
+    rowNum = models.IntegerField(null=True)
+    ###}
+            Sprsht row {{ res.rowNum }}, 
+            {% if 'error' not in res.errState %}
+                {###
+                Count Record {{ res.id }}: {{ res.CountDate|date:'Y-m-d '}} | {{ res.MaterialNum }} |
+                    {{ res.Counter }} | {{ res.LOCATION }} |
+                    {% if res.LocationOnly %}LOCATION ONLY{% else %}{{res.CTD_QTY_Expr }}{% endif %} 
+                    added
+                ###}
+                Count Record {{ res.errmsg }} added
+            {% else %}
+                <b>{{ res.errState }}: {{ res.errmsg }}</b>
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+
+    <!-- form footer -->
+    <div class="container">
+        <div class="row mx-auto max-width=100%">
+            <div class="col-4"></div>
+            <div class="col-6"></div>
+            <div class="col">
+                <button id="close_btn" type="button" onclick="window.close();" >
+                    <img src="{{ url_for('ctools.static', filename='stop-road-sign-icon.svg') }}" width="20" height="20"></img>
+                    Close Form
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+
+        function initFn() {
+            const formdata = new FormData();
+            formdata.append('currentPhase', 'resultspresented')
+            formdata.append('reqid', '{{ reqid }}')
+            csrftoken = "{{ dummyForm.csrf_token.data }}";
+            /** old jQuery 
+            $.ajax({
+                type: 'POST', 
+                data: formdata,
+                headers: {'X-CSRFToken': csrftoken},
+                processData: false, 
+                contentType: false, 
+                success: function(data) {}
+                });
+            **/
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                    // Do not set 'Content-Type' header here.
+                    // Browser automatically sets it with the boundary for FormData.
+                },
+                body: formdata
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json(); // Or response.text() depending on your server data
+            })
+            .then(data => {
+                // Handle your success data here
+                console.log(data);
+            })
+            .catch(error => {
+                // Handle errors here
+                console.error('Error:', error);
+            });
+
+            // announce the results
+            speak("Your Count Entries are Uploaded."
+                + "  {{ ResultStats.nRowsRead }} spreadsheet rows were read."
+                + "  {{ ResultStats.nRowsNoMaterial }} rows were skipped."
+                + "  There were {{ ResultStats.nRowsErrors }} rows with errors."
+                + "  {{ ResultStats.nRowsAdded }} Count Entry records were successfully uploaded."
+            );
+        };    
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFn );
+} else {
+    initFn();
+}
+
+    </script>
+
+{% endblock %}

@@ -1,101 +1,61 @@
 {% extends "cTools_common.html" %}
 
-{% block tTitle %}Update Material List from SAP Spreadsheet{% endblock %}
-{% block formName %}Update Material List from SAP MM60 or ZMSQV001 Spreadsheet{% endblock %}
+{% block tTitle %}Upload Count Entry Spreadsheet{% endblock %}
+{% block formName %}Upload Count Entry Spreadsheet{% endblock %}
 {% block wait_spinner_msgs %}Processing...<br>{% endblock %}
 {% block statusMsgs %}
-    <div>
-    <span id="retStatecode"></span>: <span id="Upload-Status"></span>
-    </div>
+    <span id="retStatecode" style="display:none"></span><span id="Upload-Status"></span>
     <div id="fatalErrMsg"></div>
 {% endblock %}
 
 {% block boddy %}
-<hr>
-<form id="getUpdSprsheet" method="post" enctype="multipart/form-data">
-    {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
-    <div class="container">
-        <div class="row">
-            <div class="col">
-                <p>
-                    <label for="use-local-copy">Use local copy of spreadsheet (for local dev/testing - <b>won't copy to server!</b>)</label>
-                    <input id="use-local-copy" type="checkbox" name="use-local-copy" value="use-local-copy" />
-                </p>
-                <div id="sprsht-remote">
-                Where is the SAP Material List Spreadsheet? 
-                <p><input id="SAPFile" type="file"
-                    name="SAPFile"
-                    accept=".xlsx,application/vnd.ms-excel">
-                </input></p>
-                </div>
-                <div id="sprsht-local">
-                <p>
-                    <label for="SAPFileServerPath">Server-visible local file path (dev/test only)</label>
-                    <input id="SAPFileServerPath" type="text" name="SAPFileServerPath" placeholder="F:\\path\\to\\SAP-MM60.xlsx" />
-                </p>
-                </div>
-                <hr>
-                <div>
-                <p>
-                    <label for="rmvMissingMaterial">Remove Material not in Sprsht?</label>
-                    <input id="rmvMissingMaterial" type="checkbox" name="rmvMissingMaterial" value="remove-missing-material" />
-                </p>
-                </div>
-                <hr>
-                <div>
-                Phs: <input id="phase" name="phase" type="text" value='init-upl' readonly></input>
-                </div>
-                <div>
-                reqid: <input id="reqid" name="reqid" type="text" value='' readonly></input>
+    <hr>
+    <form id="getUplSprsheet" method="post" enctype="multipart/form-data">
+        Where is the Count Entry Spreadsheet?
+        <input type="file" name="CEFile" required id="id_CEFile">
+        <div>
+        Phase: <input id="phase" name="phase" type="text" value='init-upl' readonly></input>
+        </div>
+        <div>
+        reqid: <input id="reqid" name="reqid" type="text" value='' readonly></input>
+        </div>
+        <hr>
+        <div>
+        Phases Completed:
+        <ul id="phases-complete">
+        </ul>
+        </div>
+        <hr>
+
+        <!-- form footer -->
+        <div class="container">
+            <div class="row mx-auto max-width=100%">
+                <div class="col-4">
+                    {###
+                    <button id="save_btn" type="button" onclick="PollServer();">
+                        <img src="{% static 'upload-outbox-line-icon.svg' %}" width="20" height="20"></img>
+                        Upload
+                    </button>
+                    ###}
+                    <button id="next_btn" type="button" disabled>
+                        <img src="{{ url_for('ctools.static', filename='svg/upload-outbox-line-icon.svg') }}" width="20" height="20"></img>
+                        Upload
+                    </button>
                 </div>
 
-                <hr>
-                <div>
-                Phases Completed:
-                <ul id="phases-complete">
-                </ul>
+                <div class="col-6"></div>
+                <div class="col">
+                    <button id="close_btn" type="button">
+                        <img src="{{ url_for('ctools.static', filename='svg/stop-road-sign-icon.svg') }}" width="20" height="20"></img>
+                        Close Form
+                    </button>
                 </div>
+            </div>
+        </div>
 
-                {# <button id="next_btn" type="submit" disabled> #}
-                <button id="next_btn" type="button" disabled>
-                    <img src="{{ url_for('ctools.static', filename='svg/upload-outbox-line-icon.svg') }}" width="20" height="20"></img>
-                    Upload
-                </button>
-                <button id="skipnext_btn" type="button" disabled>
-                Disable not implemented yet
-                </button>
-            </div>  <!-- col -->
-            <div class="col">
-                <b><u>Update Existing Records if Changed:</u></b>
-                <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="Description" /> Description</label></div>
-                <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPMatlType" /> SAP Material Type</label></div>
-                <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPMatlGroup" /> SAP Material Group</label></div>
-                <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPManuf" /> SAP Manufacturer</label></div>
-                <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPMPN" /> SAP MPN</label></div>
-                <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPABC" /> SAP ABC Designation</label></div>
-                <div><label><input type="checkbox" class="UpIfCh" name="UpIfCh" value="SAPPrice" /> Price, Price Unit and Currency</label></div>
-            </div>  <!-- col -->
-        </div>  <!-- row -->
-    </div>  <!-- container -->
-
-    <!-- form footer -->
-    <div class="container">
-        <div class="row mx-auto max-width=100%">
-            <div class="col-6">
-            </div>  <!-- col-6 -->
-            <div class="col-4"></div>
-            <div class="col">
-                <button id="close_btn" type="button">
-                    <img src="{{ url_for('ctools.static', filename='svg/stop-road-sign-icon.svg') }}" width="20" height="20"></img>
-                    Close Form
-                </button>
-            </div>  <!-- col -->
-        </div>  <!-- row -->
-    </div>  <!-- container -->
-  </form>
+    </form>
 
 <script>
-
 /* ---------- DOM CACHE ---------- */
 
 const uploadStatus = document.getElementById("Upload-Status");
@@ -108,23 +68,23 @@ const phasesCompleteList = document.getElementById("phases-complete");
 const phaseInput = document.getElementById("phase");
 const reqidInput = document.getElementById("reqid");
 
-const sapFile = document.getElementById("SAPFile");
-const useLocalCopy = document.getElementById("use-local-copy");
-const sapFileServerPath = document.getElementById("SAPFileServerPath");
-const sprshtRemoteDiv = document.getElementById("sprsht-remote");
-const sprshtLocalDiv = document.getElementById("sprsht-local");
+const inputFile = document.getElementById("id_CEFile");
+// const useLocalCopy = document.getElementById("use-local-copy");
+// const sapFileServerPath = document.getElementById("SAPFileServerPath");
+// const sprshtRemoteDiv = document.getElementById("sprsht-remote");
+// const sprshtLocalDiv = document.getElementById("sprsht-local");
 
 const nextBtn = document.getElementById("next_btn");
-const skipnextBtn = document.getElementById("skipnext_btn");
+// const skipnextBtn = document.getElementById("skipnext_btn");
 const closeBtn = document.getElementById("close_btn");
 
-const form = document.getElementById("getUpdSprsheet");
+const form = document.getElementById("getUplSprsheet");
 let progressStream = null;
 
 /* ------ PHASE LIST ------ */
 /*
 const phaselist = ["init-upl", 
-    "01ReadSpreadsheet", "02IdentifyExist", "03UpdateExisting", "04Remove", "04Add",
+    "01ReadSpreadsheet", 
     "wantresults", "cleanup-after-failure", "resultspresented", "**FINAL**"
     ];
 var currPhase = 0;
@@ -133,10 +93,7 @@ var currPhase = 0;
 const Phase = Object.freeze({
   INIT_UPL: "init-upl",
   READ_SPREADSHEET: "01ReadSpreadsheet",
-  IDENTIFY_EXIST: "02IdentifyExist",
-  UPDATE_EXISTING: "03UpdateExisting",
-  REMOVE: "04Remove",
-  ADD: "04Add",
+
   WANT_RESULTS: "wantresults",
   CLEANUP_FAILURE: "cleanup-after-failure",
   RESULTS_PRESENTED: "resultspresented",
@@ -147,10 +104,7 @@ const Phase = Object.freeze({
 const PHASE_ORDER = Object.freeze([
   Phase.INIT_UPL,
   Phase.READ_SPREADSHEET,
-  Phase.IDENTIFY_EXIST,
-  Phase.UPDATE_EXISTING,
-  Phase.REMOVE,
-  Phase.ADD,
+
   Phase.WANT_RESULTS,
   Phase.CLEANUP_FAILURE,
   Phase.RESULTS_PRESENTED,
@@ -283,38 +237,27 @@ function startProgressStream(reqid) {
 
 closeBtn.addEventListener("click", () => window.close());
 
-function refreshLocalCopyMode() {
-    const localMode = useLocalCopy.checked;
+/**   
+    local copies not used on this page (for now...). 
+    That code is commented out
+**/
+function refreshLocalCopyMode() {       // really should be refreshNextBtn here, but I don't wanna change code
+    // const localMode = useLocalCopy.checked;
     // sapFileServerPath.disabled = !localMode;
-    sprshtLocalDiv.style.display = localMode ? 'block' : 'none';
-    sprshtRemoteDiv.style.display = localMode ? 'none' : 'block';
+    // sprshtLocalDiv.style.display = localMode ? 'block' : 'none';
+    // sprshtRemoteDiv.style.display = localMode ? 'none' : 'block';
 
-    const hasUploadedFile = !!(sapFile.files && sapFile.files.length > 0);
-    const hasServerPath = sapFileServerPath.value.trim().length > 0;
+    const hasUploadedFile = !!(inputFile.files && inputFile.files.length > 0);
+    // const hasServerPath = sapFileServerPath.value.trim().length > 0;
 
-    nextBtn.disabled = localMode ? !hasServerPath : !hasUploadedFile;
+    // nextBtn.disabled = localMode ? !hasServerPath : !hasUploadedFile;
+    nextBtn.disabled = !hasUploadedFile;
 }
 
-sapFile.addEventListener('change', refreshLocalCopyMode);
-useLocalCopy.addEventListener('change', refreshLocalCopyMode);
-sapFileServerPath.addEventListener('input', refreshLocalCopyMode);
+inputFile.addEventListener('change', refreshLocalCopyMode);
+// useLocalCopy.addEventListener('change', refreshLocalCopyMode);
+// sapFileServerPath.addEventListener('input', refreshLocalCopyMode);
 refreshLocalCopyMode();
-
-// add listeners to the Update If Changed choices to hilight them if clicked
-const UpIfChChoices = document.querySelectorAll(".UpIfCh")
-UpIfChChoices.forEach(
-    function (UpIfChChoiceBox) {
-        UpIfChChoiceBox.addEventListener("change",
-            function(event) {
-                const box = event.target;
-                const container = box.closest("div");
-
-                container.style.color = box.checked ? "green" : "black";
-                container.style.fontWeight = box.checked ? "bold" : "normal";
-            }
-        );
-    }
-)
 
 
 /* ---------- async (SSE) listeners ---------- */
@@ -378,5 +321,7 @@ nextBtn.addEventListener("click", async (e) => {
     }
 
 });
+
 </script>
+
 {% endblock %}

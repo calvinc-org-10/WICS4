@@ -30,6 +30,15 @@ class Config:
     STARTUP_DELEGATE = getattr(app_secrets, 'startup_delegate', 'auth.login')
     
     MTLPHOTO_FOLDER = os.environ.get('MTLPHOTO_FOLDER') or getattr(app_secrets, 'MtlPhoto_folder', 'mtl_photos')
+    MISC_FILELOC = getattr(app_secrets, 'MISC_FILELOC', os.getcwd())
+    SAP_FILELOC = getattr(app_secrets, 'SAP_FILELOC', os.getcwd())
+
+    ACCURACY_DANGER = 90        #	1	In Count Summary, Count Accuracy less than this value is highlighted red
+    ACCURACY_SUCCESS = 98.5     #	1	In Count Summary, Count Accuracy higher than this value is highlighted green
+    ACCURACY_WARNING = 95	    #1	In Count Summary, Count Accuracy at least this value (but less than ACCURACY-SUCCESS) is highlighted yellow
+    COUNTLIST_RECLIMIT = 500
+    LOCRPT_COUNTDAYS_IFNOSAP = 30
+
 
     # this is a default value for new user password,
     # should be changed in production and moved to app_secrets.py or environment variable for better security
@@ -37,7 +46,7 @@ class Config:
 
     USER_AUTHENTICATION_ENABLED = getattr(app_secrets, 'usr_authentication_enabled', True)  # default to True if not specified in app_secrets
     # debugging - how to load calvincTools templates in subdirectories
-    EXPLAIN_TEMPLATE_LOADING = True
+    # EXPLAIN_TEMPLATE_LOADING = True
 
 
 class DevelopmentConfig(Config):

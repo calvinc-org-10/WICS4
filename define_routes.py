@@ -55,6 +55,13 @@ def define_routes(flskapp):
         endpoint='CountEntryForm_ChgKey'
         )
 
+    from views.ActualCounts.upldActCounts import fnUploadActCountSprsht
+    WICS_bp.add_url_rule('/UploadActualCounts',
+        view_func=fnUploadActCountSprsht,      #type: ignore
+        methods=['GET', 'POST'], 
+        endpoint='UploadActualCounts'
+        )
+
     ### MaterialForm routes
     #########################
     from views.Material.frmMaterial import fnMaterialForm
@@ -204,7 +211,7 @@ def define_routes(flskapp):
     # from views.Material.updtMatlList import init_UpldMatlList
     # this will start the huey pipeline
     # SSE_bp.add_url_rule('/InitUpdML', view_func=init_UpldMatlList, methods=['POST'])
-    from views.Material.updtMatlList import progress_UpdML
-    SSE_bp.add_url_rule('/UpdMatlLst/<reqid>', view_func=progress_UpdML)
+    from async_procs.progress_UplSprSht import progress_UplSprSht
+    SSE_bp.add_url_rule('/UplSprSht/<reqid>', view_func=progress_UplSprSht)
 
     flskapp.register_blueprint(SSE_bp)

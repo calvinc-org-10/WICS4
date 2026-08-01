@@ -22,7 +22,8 @@ FormNameToURL_Map = {}
 
 FormNameToURL_Map['frmcountentry'.lower()] = (None, views.ActualCounts.fnCountEntryView)
 ##FormNameToURL_Map['frmcountentry'.lower()] = ('CountEntryForm', _newcode.frmCountEntryView.fnCountEntryView)
-# FormNameToURL_Map['frmUploadCountEntry'.lower()] = ('UploadActualCountSprsht', forms.spreadsheet.UploadActCountSprsht)
+# FormNameToURL_Map['frmUploadCountEntry'.lower()] = ('WICS.UploadActualCounts', None)
+FormNameToURL_Map['frmUploadCountEntry'.lower()] = (None, views.ActualCounts.upldActCounts.fnUploadActCountSprsht_init)
 # FormNameToURL_Map['frmcountsummarypreview'.lower()] = ('CountSummaryReport', forms.fmActualCounts.rptCountSummary)
 # FormNameToURL_Map['frmrequestedcountsummary'.lower()] = ('CountSummaryReport-v-init', None)
 # FormNameToURL_Map['frmimportsap'.lower()] = ('UploadSAPSprSht', None)
@@ -49,6 +50,6 @@ FormNameToURL_Map['matllistupdt'.lower()] = (None, views.Material.updtMatlList.f
 # FormNameToURL_Map['PartTypeFm'.lower()] = ('PartTypeForm', forms.PartTypesForm)
 
 
-FormNameToURL_Map['test01'.lower()] = ('', _newcode.formlayouttest.testformlayout)
+FormNameToURL_Map['test01'.lower()] = ('', _newcode.test_xl_read.test_read)
 FormNameToURL_Map['test02'.lower()] = ('', None)
 # FormNameToURL_Map['test02'.lower()] = ('', None)
