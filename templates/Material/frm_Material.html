@@ -461,7 +461,7 @@ var _Forms = document.getElementById("FmMain").querySelectorAll(":scope input");
 var initialState
 var _gotoTextBox = document.getElementById("gotoID");
 // record the ID and GPN of current record (it's used often!)
-var thisMtlID = {{frmMain.id.data|default(0)}}, thisMtlGPN = "{{frmMain.Material.data}}"
+var thisMtlID = {{frmMain.id.data or 0}}, thisMtlGPN = "{{frmMain.Material.data or '---'}}"
 var CloseItFlag = false
 // set up MatlMap for verifying if an entered Material # is valid
 var MatlMap = new Map([

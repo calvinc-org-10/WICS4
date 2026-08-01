@@ -242,14 +242,15 @@ def fnMaterialForm(recNum = -1, gotoRec=False, newRec=False, HistoryCutoffDate=N
         SAP_SOH = fnSAPList(matl=currRec)
     # SAP_SOH = fnSAPList(matl=currRec)
 
-    if currRec.org is None: 
-        currRec.org = app_db.session.get(Organizations, _defaultOrg)  # assign default org if none
+    # Avoid assigning relationship on a transient record (e.g., newRec) because
+    # later queries can trigger autoflush warnings for back-populated collections.
+    currRec_org = currRec.org or app_db.session.get(Organizations, _defaultOrg)
     gotoForm = {
         'choicelist': [
             SimpleNamespace(id=rec.id, Material_org=f'{rec.Material}:{rec.org.orgname}') 
                 for rec in app_db.session.query(MaterialList).all()
             ],
-        'gotoItem': f'{currRec.Material}:{currRec.org.orgname}' if currRec.org else '',
+        'gotoItem': f'{currRec.Material}:{currRec_org.orgname}' if currRec_org and currRec.id and currRec.Material else '',
     }
 
     # count summary subform
