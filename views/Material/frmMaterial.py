@@ -1,4 +1,5 @@
 import os
+import re
 from types import SimpleNamespace
 from typing import Dict, Any, List
 from datetime import datetime, date
@@ -114,11 +115,56 @@ def fnMaterialForm(recNum = -1, gotoRec=False, newRec=False, HistoryCutoffDate=N
         def errors(self):
             return [fm.errors for fm in self]
 
+    def _to_int(value, default=0):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _is_empty_value(value):
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return value.strip() == ''
+        return False
+
+    def _has_meaningful_input(form_obj, field_names):
+        for field_name in field_names:
+            if field_name == 'id':
+                continue
+            if not hasattr(form_obj, field_name):
+                continue
+            data = getattr(form_obj, field_name).data
+            if isinstance(data, bool):
+                if data:
+                    return True
+            elif not _is_empty_value(data):
+                return True
+        return False
+
     def _build_subform_set(sub_key, recs):
-        entries = [
-            FormWTF[sub_key](prefix=f"{prefixvals[sub_key]}-{i}", obj=rec)
-            for i, rec in enumerate(recs)
-        ]
+        entries = []
+        prefix = prefixvals[sub_key]
+        posted_indices = set()
+
+        # On POST, build forms from posted indexes so dynamic rows are processed.
+        if request.method == 'POST':
+            rgx = re.compile(rf"^{re.escape(prefix)}-(\d+)-")
+            for key in request.form.keys():
+                m = rgx.match(key)
+                if m:
+                    posted_indices.add(int(m.group(1)))
+
+        if posted_indices:
+            for i in sorted(posted_indices):
+                rec = recs[i] if i < len(recs) else initialrec[sub_key]
+                entries.append(FormWTF[sub_key](prefix=f"{prefix}-{i}", obj=rec))
+        else:
+            entries = [
+                FormWTF[sub_key](prefix=f"{prefix}-{i}", obj=rec)
+                for i, rec in enumerate(recs)
+            ]
+
         if not entries:
             entries = [FormWTF[sub_key](prefix=f"{prefixvals[sub_key]}-0", obj=initialrec[sub_key])]
         return _SubFormSet(entries, prefixvals[sub_key])
@@ -141,6 +187,8 @@ def fnMaterialForm(recNum = -1, gotoRec=False, newRec=False, HistoryCutoffDate=N
         currRec = app_db.session.execute(
             select(modelSubs['main']).options(*related_loads).where(modelSubs['main'].id == recNum)
         ).scalars().first() or initialrec['main']
+
+    assert currRec is not None, "Material record context not available"
 
     # get current form
     mainFm = FormWTF['main'](prefix=prefixvals['main'], obj=currRec)
@@ -211,25 +259,84 @@ def fnMaterialForm(recNum = -1, gotoRec=False, newRec=False, HistoryCutoffDate=N
         # recNum = int(getattr(formRec, 'id', 0) or 0)
         # currRec = app_db.session.get(modelMain, recNum) or initialobj['main']
 
-        for subform in mainFm.subforms:
-            model_class = modelSubs[subform]
-            formRec = model_class()
-            FormWTF[subform].populate_obj(formRec)
-            formRecID = int(getattr(formRec, 'id', 0))
-            dbRec = app_db.session.get(model_class, formRecID) or initialrec[subform]
-            
-            chgd_dat[subform] = [
-                f'{field.short_name}={field.data}'
-                for field in FormWTF[subform]
-                if hasattr(dbRec, field.short_name)
-                and getattr(dbRec, field.short_name) != field.data
+        all_subforms_valid = True
+        for subform_key in ['counts', 'schedule', 'MfrPN']:
+            for sbfm in mainFm.subforms[subform_key]:
+                if not sbfm.validate():
+                    all_subforms_valid = False
+
+        if all_subforms_valid:
+            # Save main record first so child rows can reference Material_id.
+            main_form_rec_id = _to_int(getattr(mainFm.id, 'data', 0), default=0)
+            db_main = app_db.session.get(modelSubs['main'], main_form_rec_id) if main_form_rec_id > 0 else None
+            if db_main is None:
+                db_main = modelSubs['main']()
+
+            before_main = {
+                field.short_name: getattr(db_main, field.short_name)
+                for field in mainFm
+                if field.short_name != 'csrf_token' and hasattr(db_main, field.short_name)
+            }
+
+            mainFm.populate_obj(db_main)
+
+            chgd_dat['main'] = [
+                f"{fld}={getattr(db_main, fld)}"
+                for fld, old_val in before_main.items()
+                if getattr(db_main, fld) != old_val
             ]
-            if len(chgd_dat[subform]) > 0:
-                formRec.save()
-            
-            if subform == 'main':
-                currRec = formRec
-        # end for subform in mainFm.subforms
+
+            if chgd_dat['main']:
+                app_db.session.add(db_main)
+                changes_saved['main'] = True
+
+            if getattr(db_main, 'id', None) in (None, 0):
+                app_db.session.add(db_main)
+
+            app_db.session.flush()
+            currRec = db_main
+            assert currRec is not None, "Main material save failed"
+
+            # Save child rows for each subform collection.
+            for subform_key in ['counts', 'schedule', 'MfrPN']:
+                model_class = modelSubs[subform_key]
+                tracked_fields = [f for f in FormFieldsSubs[subform_key] if f != 'id']
+
+                for sbfm in mainFm.subforms[subform_key]:
+                    row_id = _to_int(getattr(getattr(sbfm, 'id', None), 'data', 0), default=0)
+                    is_new = row_id <= 0
+
+                    if is_new and not _has_meaningful_input(sbfm, tracked_fields):
+                        continue
+
+                    db_row = app_db.session.get(model_class, row_id) if row_id > 0 else None
+                    if db_row is None:
+                        db_row = model_class()
+                    before_row = {
+                        fld: getattr(db_row, fld)
+                        for fld in tracked_fields
+                        if hasattr(db_row, fld)
+                    }
+
+                    sbfm.populate_obj(db_row)
+
+                    if hasattr(db_row, 'Material_id') and currRec is not None and getattr(currRec, 'id', None):
+                        db_row.Material_id = currRec.id
+
+                    row_changes = [
+                        f"{fld}={getattr(db_row, fld)}"
+                        for fld, old_val in before_row.items()
+                        if getattr(db_row, fld) != old_val
+                    ]
+
+                    if row_changes or is_new:
+                        app_db.session.add(db_row)
+                        chgd_dat[subform_key].append(row_changes or ['new row'])
+                        changes_saved[subform_key] = True
+
+            app_db.session.commit()
+        # endif all_subforms_valid
+        # end save main/subforms
         
     else:
         # handle GET request or when form is not valid
@@ -241,6 +348,8 @@ def fnMaterialForm(recNum = -1, gotoRec=False, newRec=False, HistoryCutoffDate=N
     else:
         SAP_SOH = fnSAPList(matl=currRec)
     # SAP_SOH = fnSAPList(matl=currRec)
+
+    assert currRec is not None, "Material record context not available"
 
     # Avoid assigning relationship on a transient record (e.g., newRec) because
     # later queries can trigger autoflush warnings for back-populated collections.

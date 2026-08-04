@@ -75,12 +75,12 @@ def fnCountEntryView(
     # if request.method == 'POST' and mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
     if mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
         formRec = modelMain()
-        mainFm.populate_obj(formRec)
+        mainFm.populate_obj(obj=formRec)
         recNum = int(getattr(formRec, 'id', 0) or 0)
         currRec = app_db.session.get(modelMain, recNum) or modelMain()
 
         matlformRec = modelSubs['matl']()
-        matlSubFm.populate_obj(matlformRec)
+        matlSubFm.populate_obj(obj=matlformRec)
         matlRecNum = int(getattr(matlformRec, 'id', 0))
         model_class = modelSubs['matl']
         matlRec = app_db.session.get(model_class, matlRecNum) or model_class()
