@@ -64,30 +64,43 @@ def define_routes(flskapp):
 
     ### MaterialForm routes
     #########################
-    from views.Material.frmMaterial import fnMaterialForm
+    from views.Material.frmMaterial import fnMaterialForm_NEW
 
     WICS_bp.add_url_rule('/MaterialForm', 
-        view_func=fnMaterialForm, 
+        view_func=fnMaterialForm_NEW, 
         methods=['GET', 'POST'], 
         endpoint='MaterialForm'
         )
     WICS_bp.add_url_rule('/MaterialForm/recnum/<int:recNum>', 
-        view_func=fnMaterialForm, 
+        view_func=fnMaterialForm_NEW, 
         methods=['GET', 'POST'], 
+        defaults={'gotoRec':True, 'newRec':False},
         endpoint='MaterialFormRecNum'
         )
     WICS_bp.add_url_rule('/MaterialForm/newRec', 
-        view_func=fnMaterialForm, 
+        view_func=fnMaterialForm_NEW, 
         methods=['GET', 'POST'], 
         defaults={'gotoRec':False, 'newRec':True},
         endpoint='NewMaterialForm'
         )
     WICS_bp.add_url_rule('/MaterialForm/histcutoff/<int:recNum>/<string:HistoryCutoffDate>',
-        view_func=fnMaterialForm,
+        view_func=fnMaterialForm_NEW,
         methods=['GET', 'POST'],
         endpoint='MaterialFormChgHistCutoffDate'
         )
 
+    # photo operations ajax call for a material record
+    WICS_bp.add_url_rule('/MaterialForm/photos/<int:recNum>',
+        view_func=fnMaterialForm_NEW, 
+        methods=['POST'], 
+        endpoint='MaterialFormPhotos'
+        )
+    # copy count record ajax call for a material record
+    WICS_bp.add_url_rule('/MaterialForm/copycount/<int:recNum>',
+        view_func=fnMaterialForm_NEW, 
+        methods=['POST'], 
+        endpoint='MaterialFormCopyCount'
+        )
 
     # this will start the huey pipeline
     ### UpdateMatlListfromSAP routes

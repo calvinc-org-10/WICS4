@@ -64,7 +64,6 @@
     {% if frmMain.non_form_errors %}{{ frmMain.non_form_errors }}{% endif %}
     {% if frmMain.errors %}{{ frmMain.errors }}{% endif %}
 
-    {# django does this field wrong - when it presents it as a <select>, it makes the selected value the initial value, not the actual #}
     <hr>
 
     <!-- main part of form -->
@@ -77,7 +76,6 @@
                         Material: {{ frmMain.Material(size="15") }}
                         Description: {{ frmMain.Description(size="40") }}
                         <input type="hidden" name="OrigMaterial" value="{{ frmMain.Material.data }}"></input>
-                        <input type="hidden" name="MatlPK" value="{{ frmMain.id.data }}"></input>
                     </div>
                     <div class="col">
                         Part Type:  {{ frmMain.PartType_id(style="width:10em") }}

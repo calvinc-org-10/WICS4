@@ -44,7 +44,8 @@ class MfrPNSubForm(FlaskForm):
         model = MfrPNtoMaterial
 
 class MaterialForm(FlaskForm):
-    id = forms.IntegerField(validators=[Optional()])
+    # id = forms.IntegerField(validators=[Optional()])
+    id = forms.HiddenField()
     org_id = forms.SelectField(choices=[], validators=[DataRequired()])
     Material = forms.StringField(validators=[DataRequired()])
     Description = forms.StringField(validators=[DataRequired()])
