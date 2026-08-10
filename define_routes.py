@@ -116,17 +116,24 @@ def define_routes(flskapp):
         endpoint='UpdateMatlListfromSAP'
         )
 
+    ### Count Summary Report routes
+    #########################
+    # path('CountSummaryRpt/v/REQ',
+    #         procs_ActualCounts.fnCountSummaryReqRpt, name='CountSummaryReport-v-init'),
+    # path('CountSummaryRpt/v/<str:Rptvariation>',
+    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport-v'),
+    # path('CountSummaryRpt/v/<str:Rptvariation>/<str:passedCountDate>',
+    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport-v'),
+    # path('CountSummaryRpt',
+    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport'),
+    # path('CountSummaryRpt/<str:passedCountDate>',
+    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport'),
+
     flskapp.register_blueprint(WICS_bp)
 
 #################################################
 
     # the old WICS3 Django paths
-    # path('MaterialForm',
-    #         procs_Material.fnMaterialForm, name='MatlForm'),
-    # path('MaterialForm/recnum/<int:recNum>',
-    #         procs_Material.fnMaterialForm, name='MatlFormRecNum'),
-    # path('MaterialForm/newRec',
-    #         procs_Material.fnMaterialForm, {'gotoRec':False, 'newRec':True}, name='NewMatlForm'),
     # path('MaterialForm/histcutoff/<int:recNum>/<str:HistoryCutoffDate>',
     #         procs_Material.fnMaterialForm, name='MatlFormChgHistCutoffDate'),
 
@@ -157,17 +164,6 @@ def define_routes(flskapp):
     #         views.fnRequestedCountEditListView, name='RequestCountListEdit'),
     # path('RequestedCountListEdit/<int:ShowFilledRequests>',
     #         views.fnRequestedCountEditListView, name='RequestCountListEditShowFilled'),
-
-    # path('CountSummaryRpt/v/REQ',
-    #         procs_ActualCounts.fnCountSummaryReqRpt, name='CountSummaryReport-v-init'),
-    # path('CountSummaryRpt/v/<str:Rptvariation>',
-    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport-v'),
-    # path('CountSummaryRpt/v/<str:Rptvariation>/<str:passedCountDate>',
-    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport-v'),
-    # path('CountSummaryRpt',
-    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport'),
-    # path('CountSummaryRpt/<str:passedCountDate>',
-    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport'),
 
     # path('CountWorksheet',
     #         procs_CountSchedule.viewCountWorksheetReport,name='CountWorksheet'),
