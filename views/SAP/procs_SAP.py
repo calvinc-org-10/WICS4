@@ -3,41 +3,62 @@ import ast
 import subprocess, signal
 import json
 from functools import partial
-from django import forms
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.conf import settings as django_settings
-from django.db import connection, connections, transaction
-from django.db.models import Max, OuterRef, Subquery
-from django.http import HttpRequest, HttpResponse #, HttpResponseNotModified
-from django.shortcuts import render
-from django_q.tasks import async_task
+
+from sqlalchemy import select
+
+from flask import (
+    request, session, 
+    jsonify,
+    current_app,
+    )
+from flask_login import login_required, current_user
+
+from datetime import date
+
 from openpyxl import load_workbook
-import WICS.procs_SAP
-from cMenu.models import getcParm
-from cMenu.utils import calvindate, ExcelWorkbook_fileext
-from cMenu.views import user_db
-import WICS.globals
-from WICS.models import SAP_SOHRecs, SAPPlants_org, UnitsOfMeasure, UploadSAPResults  #, VIEW_SAP
-from WICS.models import WhsePartTypes, MaterialList, tmpMaterialListUpdate
-from WICS.models_async_comm import async_comm, set_async_comm_state
+
+from calvincTools.utils import (
+    calvindate, 
+    ExcelWorkbook_fileext,
+    checkTemplate_and_render,
+    coerce_date,
+    )
+
+from models import (
+    SAP_SOHRecs, SAPPlants_org, UnitsOfMeasure, UploadSAPResults,
+    #, VIEW_SAP
+    WhsePartTypes, MaterialList, tmpMaterialListUpdate,
+    async_comm,
+    )
+
+from database import app_db
 
 
-def fnSAPExists(req:HttpRequest, reqDate:calvindate=calvindate().today()) -> bool:
+def nearestSAPDate(for_date=date.today()) -> date|None:
+    """
+    returns the nearest SAP_SOHRecs.uploaded_at date that is less than or equal to for_date
+    if no SAP_SOHRecs exist, returns None
+    """
+    
+    stmt = select(SAP_SOHRecs.uploaded_at).where(SAP_SOHRecs.uploaded_at <= for_date).order_by(SAP_SOHRecs.uploaded_at.desc()).limit(1)
+    nearest_date = app_db.session.execute(stmt).scalar_one_or_none()
+    return nearest_date
+# nearestSAPDate
+
+def fnSAPExists(reqDate:date=date.today()) -> bool:
     """
     returns true or false indicating if SAP_SOH data exists for reqDate
     """
 
-    return SAP_SOHRecs.objects.using(user_db(req)).filter(uploaded_at=calvindate(reqDate).as_datetime()).exists()
-def fnajaxSAPExists(req, reqDate=calvindate().today()):
+    return nearestSAPDate(for_date=reqDate) == reqDate
+# fnSAPExists
+def fnajaxSAPExists(reqDate=date.today()):
     """
     returns true or false to an ajax caller indicating if SAP_SOH data exists for reqDate
     """
 
-    retinfo = HttpResponse()
-
-    retinfo.write(json.dumps(fnSAPExists(req, reqDate)))
-    return retinfo
+    return jsonify(fnSAPExists(reqDate))
+# fnajaxSAPExists
 
 
 @login_required
