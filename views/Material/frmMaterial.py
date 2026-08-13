@@ -35,12 +35,9 @@ from models import (
     SAP_SOHRecs, UnitsOfMeasure,
     _defaultOrg,
     )
+from views.SAP.procs_SAP import fnSAPList
 
 from database import app_db
-
-# dummy until fnSAPList is defined
-def fnSAPList(matl:Any=None):
-    return []
 
 
 @login_required

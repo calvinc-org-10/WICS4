@@ -45,7 +45,7 @@ FormNameToURL_Map['matllistupdt'.lower()] = (None, views.Material.updtMatlList.f
 # FormNameToURL_Map['rptCountWorksheetLoc'.lower()] = ('CountWorksheetLoc', None)
 # FormNameToURL_Map['rptMaterialLocations'.lower()] = ('MaterialLocations', None)
 # FormNameToURL_Map['LocationList'.lower()] = ('LocationList', None)
-# FormNameToURL_Map['sap'.lower()] = ('showtable-SAP', None)
+FormNameToURL_Map['sap'.lower()] = (None, views.SAP.procs_SAP.fnShowSAP)
 # FormNameToURL_Map['tblActualCounts'.lower()] = ('ActualCountList', None)
 # FormNameToURL_Map['PartTypeFm'.lower()] = ('PartTypeForm', forms.PartTypesForm)
 

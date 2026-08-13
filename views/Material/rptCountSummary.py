@@ -27,7 +27,7 @@ def fnCountSummaryRpt (req, passedCountDate='CURRENT_DATE', Rptvariation=None):
 
     # get the SAP data
     dtobj_pDate = coerce_date(passedCountDate)
-    SAP_SOH = fnSAPList(req, dtobj_pDate)
+    SAP_SOH = fnSAPList(dtobj_pDate)
 
     # prep Excel_qdict.  It's up here so that the functions below have access to it
     Excel_qdict = []

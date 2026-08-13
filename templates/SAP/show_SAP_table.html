@@ -1,0 +1,114 @@
+{% extends "cTools_common.html" %}
+
+{% block tTitle %}SAP Table{% endblock %}
+{% block formName %}
+    SAP Table 
+    <span class="container">
+        <select id="gotoID" onchange="loadSAPDate();">
+        {% for SD in SAPDateList %}
+            <option value="{{SD}}"  {# <option value="{{SD|slice:':10'}}"  #}
+            {% if SD == SAPDate %} selected{% endif %}
+            >{{SD}}</option>
+        {% endfor %}
+        </select>
+    </span>
+{% endblock formName %}
+{% block boddy %}
+<!-- menu head -->
+<hr>
+<div class="container">
+    <ul>
+        <li>
+        org &amp; Material | 
+        Description |
+        SAP StorageLocation | 
+        SAP Quantity (unrestricted) |
+        SAP ValueUnrestricted |
+        SpecialStock | 
+        Batch | 
+        Vendor
+        |&#x26AB|  <!-- big round separator ball -->
+        SAP Blocked |
+        SAP ValueBlocked | 
+        </li>
+    </ul>
+</div>
+
+<!-- body -->
+<div class="container" style="height:350px; overflow-y:auto;">
+    <ul>
+    {% for SAProw in SAPSet %}
+    <li>
+        {{ SAProw.Material.org }}
+        {{ SAProw.Material }} | 
+        {{ SAProw.Description }} |
+        {{ SAProw.StorageLocation }} | 
+        {{ SAProw.Amount }}  {{ SAProw.BaseUnitofMeasure }} |
+        {{ SAProw.Currency }} {{ SAProw.ValueUnrestricted|floatformat:"2" }} |
+        {{ SAProw.SpecialStock }} | 
+        {{ SAProw.Batch }} | 
+        {{ SAProw.Vendor }}
+        |&#x26AB|   <!-- big round separator ball -->
+        {{ SAProw.Blocked }}  {{ SAProw.BaseUnitofMeasure }} |
+        {{ SAProw.Currency }} {{ SAProw.ValueBlocked|floatformat:"2" }} | 
+    </li>
+    {% if forloop.index is divisibleby 5 %}<hr>{% endif %}
+    {% endfor %}
+    </ul>
+</div>
+
+<!-- footer -->
+<hr>
+<div class="container">
+    <div class="row mx-auto max-width=100%">
+        <div class="col-2">
+        </div>
+        <div class="col-8">
+        </div>
+        <div class="col-2">
+            <button 
+                id="close_btn" 
+                type="button">
+                <img src="{{ url_for('static', filename='stop-road-sign-icon.svg') }}" width="20" height="20"></img>
+                Close Form
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const gotoTextBox = document.getElementById("#gotoID");
+
+
+    document.body.onbeforeunload = function() {
+        document.getElementById("wait_spinner").style.display = "block";
+        }
+
+    // later, duplicate this for closeform (see document.body.onbeforeunload)
+    document.getElementById("close_btn").addEventListener("click",
+        function(evobj){
+            if (confirmLeave()) {
+                window.close()
+            }
+        });
+
+    function confirmLeave(){
+        // there's no form, so
+        return true;
+    };
+
+    function loadSAPDate() {
+        // send #gotoID back into the showSAP url
+        dVal = gotoTextBox.value.replace(" ","%20");
+
+        alert("I'll fix this later...);
+        // newRec = "{% url 'showtable-SAP' 'passedDate' %}";
+        // newRec = newRec.replace("/passedDate","/"+dVal);
+        // window.location = newRec;
+
+    };
+
+</script>
+
+{% endblock %}

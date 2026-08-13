@@ -39,6 +39,7 @@ class Config:
     COUNTLIST_RECLIMIT = 500
     LOCRPT_COUNTDAYS_IFNOSAP = 30
 
+    DEFAULT_DATEFORMAT = '%Y-%m-%d'  # default date format for displaying dates in the app
 
     # this is a default value for new user password,
     # should be changed in production and moved to app_secrets.py or environment variable for better security
