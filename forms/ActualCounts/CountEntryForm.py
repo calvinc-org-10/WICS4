@@ -30,6 +30,7 @@ class CountEntryForm(FlaskForm):
 
 class RelatedMaterialInfo(FlaskForm):
     id = forms.HiddenField(validators=[Optional()])
+    Material = forms.HiddenField(validators=[Optional()])
     Description = forms.StringField(validators=[Optional()], render_kw={"disabled": True})
     # PartType_id = forms.HiddenField()
     PartType_id = forms.SelectField(choices=[])

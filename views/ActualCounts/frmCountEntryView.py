@@ -101,22 +101,23 @@ def fnCountEntryView(
             changes_saved['main'] = formRec.id
         
         # now changes to material record
-        chgd_dat['matl'] = [
-            f'{field.short_name}={field.data}'
-            for field in matlSubFm
-            if field.short_name != 'Description'
-            and hasattr(matlRec, field.short_name)
-            and getattr(matlRec, field.short_name) != field.data
-        ]
-        if len(chgd_dat['matl']) > 0:
-            matlformRec.save()
-            changes_saved['matl'] = matlRec.id
+        chgd_dat['matl'] = ["changes to material record not supported at this time"]
+        # chgd_dat['matl'] = [
+        #     f'{field.short_name}={field.data}'
+        #     for field in matlSubFm
+        #     if field.short_name != 'Description'
+        #     and hasattr(matlRec, field.short_name)
+        #     and getattr(matlRec, field.short_name) != field.data
+        # ]
+        # if len(chgd_dat['matl']) > 0:
+        #     matlformRec.save()
+        #     changes_saved['matl'] = matlRec.id
 
-            # count schedule subform
-            # if schedSet.has_changed():
-            #      schedSet.save()
-            #      chgd_dat['schedule'] = schedSet.changed_data
-            #      changes_saved['schedule'] = True
+        # count schedule subform
+        # if schedSet.has_changed():
+        #      schedSet.save()
+        #      chgd_dat['schedule'] = schedSet.changed_data
+        #      changes_saved['schedule'] = True
 
         # we build the new record to present. We don't want to carry any POST state forward, but we do want to show the user the record they just saved. 
         # We use the post-if POST/GET logic here so that changes_saved and chgd_dat will be passed into context.

@@ -116,6 +116,7 @@
         <hr>
         <div class="row g-0">
             {{ frmMatlInfo.hidden_tag() }}
+            {# {{ frmMatlInfo.Material(type="hidden") }} #}
             <span>{{ frmMatlInfo.id.data | default('---', True) }}</span>
             {# <div class="col-4">Desc: {{ frmMatlInfo.Description(size="40", disabled=True) }}</div> #}
             <div class="col-4">Desc: {{ frmMatlInfo.Description(size="40") }}</div>

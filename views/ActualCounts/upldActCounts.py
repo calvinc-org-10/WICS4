@@ -477,7 +477,7 @@ def proc_UpActCountSprsheet_01ReadSheet(reqid: Any, fName: str) -> None:
             statetext = f'Finished Reading Spreadsheet',
             )
         return reqid
-    else:
+    else:   # statecode _is_ 'fatalerr'
         statetext = f'Error: Something went wrong while reading the spreadsheet. Please check the spreadsheet and try again. Details: {statetext}'
         # async_comm.set_async_comm_state(
         #     reqid,
@@ -486,6 +486,7 @@ def proc_UpActCountSprsheet_01ReadSheet(reqid: Any, fName: str) -> None:
         #     result = 'FAIL - error reading spreadsheet',
         #     )
         raise FatalUploadError(statetext)
+    # endif statecode != 'fatalerr'
 # proc_UpActCountSprsheet_01ReadSheet
 
 def proc_UpActCountSprsheet_99_FinalProc(reqid:Any) -> None:
