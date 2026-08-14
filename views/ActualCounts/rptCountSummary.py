@@ -1,7 +1,13 @@
+from typing import cast, Any
 
 from flask_login import login_required
 
-from calvincTools.utils import coerce_date
+from calvincTools.mathexpr_parser import evaluate
+from calvincTools.utils import (
+    coerce_date,
+    )
+
+from views.SAP import fnSAPList
 
 
 #####################################################################
@@ -18,12 +24,10 @@ def coerce_float(x) -> float:
     return 0.0
 
 @login_required
-def fnCountSummaryReqRpt(req, passedCountDate='CURRENT_DATE'):
-    return fnCountSummaryRpt(req, passedCountDate, Rptvariation='REQ')
+def fnCountSummaryReqRpt(passedCountDate='CURRENT_DATE'):
+    return fnCountSummaryRpt(passedCountDate, Rptvariation='REQ')
 @login_required
-def fnCountSummaryRpt (req, passedCountDate='CURRENT_DATE', Rptvariation=None):
-
-    dbUsing = user_db(req)
+def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
 
     # get the SAP data
     dtobj_pDate = coerce_date(passedCountDate)
@@ -123,7 +127,7 @@ def fnCountSummaryRpt (req, passedCountDate='CURRENT_DATE', Rptvariation=None):
         #end def DetailLine
 
         outputrows = []
-        lastrow = {'Material_id': None}
+        lastrow:dict[str, Any] = {'Material_id': None}
         for rawrow in raw_qs:
             if rawrow.matl_id != lastrow['Material_id']:     # new Matl
                 if outputrows:
@@ -143,7 +147,8 @@ def fnCountSummaryRpt (req, passedCountDate='CURRENT_DATE', Rptvariation=None):
             # process this row
             outputline = DetailLine(rawrow, Eval_CTDQTY)
             outputrows.append(outputline)
-            if isinstance(outputline['CTD_QTY_Eval'],(int,float)): lastrow['TotalCounted'] += outputline['CTD_QTY_Eval']
+            if isinstance(outputline['CTD_QTY_Eval'],(int,float)): 
+                lastrow['TotalCounted'] += outputline['CTD_QTY_Eval']
         # endfor
         # need to do the summary on the last row
         if outputrows:
