@@ -89,7 +89,7 @@ def fnShowSAP(reqDate=date.today()):
             'SAPSet': SAP_tbl['SAPTable'],
             }
     templt = 'SAP/show_SAP_table.html'
-    return checkTemplate_and_render(templt, cntext)
+    return checkTemplate_and_render(templt, **cntext)
 
 
 ####################################################################################
@@ -146,14 +146,18 @@ def fnSAPList(for_date = date.today(), matl = None) -> dict:
     # endif matl provided
 
     SAPLatest = app_db.session.execute(stmt).all()
-
+    sap_record_list = []
+    for sap_record, mult in SAPLatest:
+        sap_record.mult = mult
+        sap_record_list.append(sap_record)
+    
     SList = {'reqDate': for_date, 'SAPDate': LatestSAPDate, 'SAPTable':[]}
 
     # yea, building SList is sorta wasteful, but a lot of existing code depends on it
     # won't be changing it until a total revamp of WICS
-    if not SAPLatest:
+    if not sap_record_list:
         SList['SAPDate'] = None
-    SList['SAPTable'] = SAPLatest
+    SList['SAPTable'] = sap_record_list
 
     return SList
 

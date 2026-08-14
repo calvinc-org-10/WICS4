@@ -346,9 +346,12 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
         SAP_SOH = fnSAPList(matl='-')
     else:
         SAP_SOH = fnSAPList(matl=currRec)
+    # strip out the SAP_SOH structure that is not needed for the template, to simplify and reduce the amount of data sent to the client.
+    # currently, fixing fnSAPList to return simpler structure. Remove this when verified that fnSAPList is returning the simpler structure.
+    # SAP_SOH = [ 
+    #     SAP_SOH['SAPTable'][i][0]
 
     # assert currRec is not None, 'Material record context not available'
-
     currRec_org = currRec.org or app_db.session.get(Organizations, _defaultOrg)
     gotoForm = {
         'choicelist': [
@@ -437,12 +440,12 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
                 'CountDate': r.CountDate,
                 'CountQTY_Eval': 0,
                 'SAPDate': SAPDate,
-                'SAPQty': SAPQty,
+                'SAPQty': int(SAPQty),
             }
 
         PIQty = summrecdict['CountQTY_Eval'] + r.QtyEval
         summrecdict['CountQTY_Eval'] = PIQty
-        summrecdict['Diff'] = PIQty - SAPQty
+        summrecdict['Diff'] = int(PIQty - SAPQty)
         divsr = 1
         if PIQty != 0 or SAPQty != 0:
             divsr = max(PIQty, SAPQty)

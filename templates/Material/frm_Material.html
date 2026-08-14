@@ -105,10 +105,10 @@
                 </div>
                 <hr>
                 <div class="row">
-                    <div class="col-8 text-start">
+                    <div class="col-10 text-start">
                         SAP Date: {{ SAPSet.SAPDate }}
                         {% if SAPSet.SAPTable %}
-                            {% for s in SAPSet.SAPTable %}({{ s.MaterialPartNum }}, {{ s.StorageLocation }}, {{ s.Amount }}, {{s.BaseUnitofMeasure}}){% endfor %}
+                            {% for s in SAPSet.SAPTable %}({{ s.MaterialPartNum }}, {{ s.StorageLocation }}, {{ s.Amount | int }}, {{s.BaseUnitofMeasure}}){% endfor %}
                         {% else %}
                             <b> No SAP Quantity</b>
                         {% endif %}

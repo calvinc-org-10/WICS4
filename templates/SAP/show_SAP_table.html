@@ -39,20 +39,20 @@
     <ul>
     {% for SAProw in SAPSet %}
     <li>
-        {{ SAProw.Material.org }}
-        {{ SAProw.Material }} | 
+        {{ SAProw.Material.org.orgname }}
+        {{ SAProw.Material.Material }} | 
         {{ SAProw.Description }} |
         {{ SAProw.StorageLocation }} | 
-        {{ SAProw.Amount }}  {{ SAProw.BaseUnitofMeasure }} |
-        {{ SAProw.Currency }} {{ SAProw.ValueUnrestricted|floatformat:"2" }} |
+        {{ SAProw.Amount|round(3) }}  {{ SAProw.BaseUnitofMeasure }} |
+        {{ SAProw.Currency }} {{ SAProw.ValueUnrestricted|round(2) }} |
         {{ SAProw.SpecialStock }} | 
         {{ SAProw.Batch }} | 
         {{ SAProw.Vendor }}
         |&#x26AB|   <!-- big round separator ball -->
-        {{ SAProw.Blocked }}  {{ SAProw.BaseUnitofMeasure }} |
-        {{ SAProw.Currency }} {{ SAProw.ValueBlocked|floatformat:"2" }} | 
+        {{ SAProw.Blocked|round(3) }}  {{ SAProw.BaseUnitofMeasure }} |
+        {{ SAProw.Currency }} {{ SAProw.ValueBlocked|round(2) }} | 
     </li>
-    {% if forloop.index is divisibleby 5 %}<hr>{% endif %}
+    {% if loop.index is divisibleby 5 %}<hr>{% endif %}
     {% endfor %}
     </ul>
 </div>
@@ -78,7 +78,7 @@
 
 
 <script>
-    const gotoTextBox = document.getElementById("#gotoID");
+    const gotoTextBox = document.getElementById("gotoID");
 
 
     document.body.onbeforeunload = function() {
@@ -102,8 +102,8 @@
         // send #gotoID back into the showSAP url
         dVal = gotoTextBox.value.replace(" ","%20");
 
-        alert("I'll fix this later...);
-        // newRec = "{% url 'showtable-SAP' 'passedDate' %}";
+        alert("I'll fix this later...");
+        // newRec = "{#{{ url_for('showtable-SAP', passedDate=None) }}#}";
         // newRec = newRec.replace("/passedDate","/"+dVal);
         // window.location = newRec;
 
