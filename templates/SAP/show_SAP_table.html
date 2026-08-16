@@ -102,7 +102,6 @@
         // send #gotoID back into the showSAP url
         dVal = gotoTextBox.value.replace(" ","%20");
 
-        alert("I'll fix this later...");
         newRec = "{{ url_for('WICS.showtable-SAP-dt', reqDate='passedDate') }}";
         newRec = newRec.replace("/passedDate","/"+dVal);
         window.location = newRec;
