@@ -124,12 +124,12 @@ def define_routes(flskapp):
         methods=['GET'], 
         endpoint='CountSummaryReport-vREQ-init',
         )
-    WICS_bp.add_url_rule('/CountSummaryRpt/v/<str:Rptvariation>',
+    WICS_bp.add_url_rule('/CountSummaryRpt/v/<string:Rptvariation>',
         view_func=rptCountSummary.fnCountSummaryRpt, 
         methods=['GET'], 
         endpoint='CountSummaryReport-v',
         )
-    WICS_bp.add_url_rule('/CountSummaryRpt/v/<str:Rptvariation>/<str:passedCountDate>',
+    WICS_bp.add_url_rule('/CountSummaryRpt/v/<string:Rptvariation>/<string:passedCountDate>',
         view_func=rptCountSummary.fnCountSummaryRpt, 
         methods=['GET'], 
         endpoint='CountSummaryReport-v-dt',
@@ -139,7 +139,7 @@ def define_routes(flskapp):
         methods=['GET'], 
         endpoint='CountSummaryReport',
         )
-    WICS_bp.add_url_rule('/CountSummaryRpt/<str:passedCountDate>',
+    WICS_bp.add_url_rule('/CountSummaryRpt/<string:passedCountDate>',
         view_func=rptCountSummary.fnCountSummaryRpt, 
         methods=['GET'], 
         endpoint='CountSummaryReport-dt',
@@ -153,12 +153,12 @@ def define_routes(flskapp):
         methods=['GET'], 
         endpoint='showtable-SAP',
         )
-    WICS_bp.add_url_rule('/SAP/<str:reqDate>',
+    WICS_bp.add_url_rule('/SAP/<string:reqDate>',
         view_func=procs_SAP.fnShowSAP, 
         methods=['GET'], 
         endpoint='showtable-SAP-dt',
         )
-    WICS_bp.add_url_rule('/SAP/exst/<str:reqDate>',
+    WICS_bp.add_url_rule('/SAP/exst/<string:reqDate>',
         view_func=procs_SAP.fnajaxSAPExists, 
         methods=['GET'], 
         endpoint='SAPajaxExists',
