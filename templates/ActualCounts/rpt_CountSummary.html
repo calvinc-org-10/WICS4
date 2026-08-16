@@ -206,12 +206,19 @@
         });
 
     //---------
+    RESTARTHERE
+    const swap_detail_disp_btn = document.getElementById("swap_detail_disp_btn");
+    const all_ctsummdetail_lines = document.querySelectorAll(".CtSummDetail");
+    const all_ctsummdetail_first = document.querySelector(".CtSummDetail");
+    const ctDate_elmnt = document.getElementById("CtDate");
 
     function newCtDate() {
         {% if variation is None %}
-        var newRec = "{% url 'CountSummaryReport' 'PCD' %}".replace('/PCD','/'+$('#CtDate').val())
+        var newRec = "{{ url_for('CountSummaryReport-dt',passedCountDate='PCD') }}".replace('/PCD','/'+ctDate_elmnt.value);
         {% else %}
-        var newRec = "{% url 'CountSummaryReport-v' 'VARI' 'PCD' %}".replace('/PCD','/'+$('#CtDate').val()).replace('/VARI','/{{variation}}')
+        var newRec = "{{ url_for( 'CountSummaryReport-v-dt',Rptvariation='VARI',passedCountDate='PCD') }}"
+            .replace('/PCD','/'+ctDate_elmnt.value)
+            .replace('/VARI','/{{variation}}')
         {% endif %}
         window.location = newRec;
     }
@@ -225,13 +232,13 @@
 
     function swap_detail_disp() {
         // Hide/Show detail records
-        let detailvis = $(".CtSummDetail").attr("style");
-        if (detailvis==undefined) {
-            $(".CtSummDetail").css("display","none")
-            $("#swap_detail_disp_btn").html("Show Detail")
+        let detailvis = all_ctsummdetail_first?.style.getPropertyValue("display");
+        if (detailvis!="none") {
+            document.querySelectorAll(".CtSummDetail").forEach(element => { element.style.display = "none"; });
+            swap_detail_disp_btn.textContent = "Show Detail";
         } else {
-            $(".CtSummDetail").removeAttr("style")
-            $("#swap_detail_disp_btn").html("Hide Detail")
+            document.querySelectorAll(".CtSummDetail").forEach(element => { element.style.display = "block"; });
+            swap_detail_disp_btn.textContent = "Hide Detail";
         }
     }
 

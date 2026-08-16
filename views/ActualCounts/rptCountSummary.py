@@ -1,5 +1,7 @@
+import os
 from typing import cast, Any
 
+from flask import current_app
 from flask_login import login_required
 
 from sqlalchemy import select, text
@@ -9,6 +11,7 @@ from calvincTools.utils import (
     coerce_date, IsDateString, 
     WrapInQuotes, 
     Excelfile_fromqs, ExcelWorkbook_fileext,
+    checkTemplate_and_render,    
     )
 
 from database import app_db
@@ -266,13 +269,13 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
                     })
 
     AccuracyCutoff = {
-                'DANGER': coerce_float(getcParm(req, 'ACCURACY-DANGER')),
-                'SUCCESS': coerce_float(getcParm(req, 'ACCURACY-SUCCESS')),
-                'WARNING': coerce_float(getcParm(req, 'ACCURACY-WARNING')),
+                'DANGER': coerce_float(current_app.config.get('ACCURACY-DANGER', 90)),
+                'SUCCESS': coerce_float(current_app.config.get('ACCURACY-SUCCESS',97)),
+                'WARNING': coerce_float(current_app.config.get('ACCURACY-WARNING',95)),
                 }
 
     ExcelFileNamePrefix = "CountSummary "
-    svdir = django_settings.STATIC_ROOT if django_settings.STATIC_ROOT is not None else django_settings.STATICFILES_DIRS[0]
+    svdir = current_app.config.get('SAP_FILELOC', os.getcwd())
     fName_base = '/tmpdl/'+ExcelFileNamePrefix + f'{dtobj_pDate:%Y-%m-%d}'
     fName = svdir + fName_base
     ExcelFileName = Excelfile_fromqs(Excel_qdict, fName)
@@ -287,6 +290,6 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
             'FilSavLoc': ExcelFileName,
             'ExcelFileName': fName_base+ExcelWorkbook_fileext,
             }
-    templt = 'rpt_CountSummary.html'
-    return render(req, templt, cntext)
+    templt = 'ActualCounts/rpt_CountSummary.html'
+    return checkTemplate_and_render(templt, cntext)
 

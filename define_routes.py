@@ -118,16 +118,52 @@ def define_routes(flskapp):
 
     ### Count Summary Report routes
     #########################
-    # path('CountSummaryRpt/v/REQ',
-    #         procs_ActualCounts.fnCountSummaryReqRpt, name='CountSummaryReport-v-init'),
-    # path('CountSummaryRpt/v/<str:Rptvariation>',
-    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport-v'),
-    # path('CountSummaryRpt/v/<str:Rptvariation>/<str:passedCountDate>',
-    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport-v'),
-    # path('CountSummaryRpt',
-    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport'),
-    # path('CountSummaryRpt/<str:passedCountDate>',
-    #         procs_ActualCounts.fnCountSummaryRpt, name='CountSummaryReport'),
+    from views.ActualCounts import rptCountSummary
+    WICS_bp.add_url_rule('/CountSummaryRpt/v/REQ',
+        view_func=rptCountSummary.fnCountSummaryReqRpt, 
+        methods=['GET'], 
+        endpoint='CountSummaryReport-vREQ-init',
+        )
+    WICS_bp.add_url_rule('/CountSummaryRpt/v/<str:Rptvariation>',
+        view_func=rptCountSummary.fnCountSummaryRpt, 
+        methods=['GET'], 
+        endpoint='CountSummaryReport-v',
+        )
+    WICS_bp.add_url_rule('/CountSummaryRpt/v/<str:Rptvariation>/<str:passedCountDate>',
+        view_func=rptCountSummary.fnCountSummaryRpt, 
+        methods=['GET'], 
+        endpoint='CountSummaryReport-v-dt',
+        )
+    WICS_bp.add_url_rule('/CountSummaryRpt',
+        view_func=rptCountSummary.fnCountSummaryRpt, 
+        methods=['GET'], 
+        endpoint='CountSummaryReport',
+        )
+    WICS_bp.add_url_rule('/CountSummaryRpt/<str:passedCountDate>',
+        view_func=rptCountSummary.fnCountSummaryRpt, 
+        methods=['GET'], 
+        endpoint='CountSummaryReport-dt',
+        )
+
+    ### SAP Table routes
+    #########################
+    from views.SAP import procs_SAP
+    WICS_bp.add_url_rule('/SAP',
+        view_func=procs_SAP.fnShowSAP, 
+        methods=['GET'], 
+        endpoint='showtable-SAP',
+        )
+    WICS_bp.add_url_rule('/SAP/<str:reqDate>',
+        view_func=procs_SAP.fnShowSAP, 
+        methods=['GET'], 
+        endpoint='showtable-SAP-dt',
+        )
+    WICS_bp.add_url_rule('/SAP/exst/<str:reqDate>',
+        view_func=procs_SAP.fnajaxSAPExists, 
+        methods=['GET'], 
+        endpoint='SAPajaxExists',
+        )
+    
 
     flskapp.register_blueprint(WICS_bp)
 
@@ -198,11 +234,6 @@ def define_routes(flskapp):
     #         procs_Material.fnPartTypesForm, {'gotoRec':True}, name='ReloadPTypForm'),
     # path('DeltePartType/<int:recNum>',
     #         procs_Material.fnDeletPartTypes, name='DeletePTyp'),
-
-    # path('SAP',procs_SAP.fnShowSAP,name='showtable-SAP'),
-    # path('SAP/<str:reqDate>',procs_SAP.fnShowSAP,name='showtable-SAP'),
-    
-    # path('SAP/exists/ajax/<str:reqDate>',procs_SAP.fnajaxSAPExists,name='SAPajaxExists'),
 
     # path('UpldActCtSprsht', procs_ActualCounts.fnUploadActCountSprsht, name='UploadActualCountSprsht'),
 
