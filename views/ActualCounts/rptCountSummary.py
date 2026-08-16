@@ -2,10 +2,17 @@ from typing import cast, Any
 
 from flask_login import login_required
 
+from sqlalchemy import select, text
+
 from calvincTools.mathexpr_parser import evaluate
 from calvincTools.utils import (
-    coerce_date,
+    coerce_date, IsDateString, 
+    WrapInQuotes, 
+    Excelfile_fromqs, ExcelWorkbook_fileext,
     )
+
+from database import app_db
+from models import Organizations, CountSchedule
 
 from views.SAP import fnSAPList
 
@@ -178,16 +185,18 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
         ", mtl.id as matl_id, mtl.org_id, mtl.OrgName" \
         ", mtl.Material_org as Matl_PartNum, mtl.PartType as PartType" \
         ", mtl.Description, mtl.TypicalContainerQty, mtl.TypicalPalletQty, mtl.Notes as mtl_Notes"
-    if isDate(passedCountDate): datestr = WrapInQuotes(passedCountDate,"'","'")
+    if IsDateString(str(passedCountDate)): datestr = WrapInQuotes(passedCountDate,"'","'")
     else: datestr = passedCountDate
     date_condition = '(ac.CountDate = ' + datestr + ' OR cs.CountDate = ' + datestr + ') '
     order_by = 'Matl_PartNum'
 
     VIEW_Material_sql = "VIEW_materials mtl "
 
-    for org in Organizations.objects.using(dbUsing).all():
+    stmt = select(Organizations).order_by(Organizations.orgname)
+    all_orgs = app_db.session.execute(stmt).scalars().all()
+    for org in all_orgs:
         # group by org_id
-        org_condition = '(mtl.org_id = ' + str(org.pk) + ')'
+        org_condition = '(mtl.org_id = ' + str(org.id) + ')'
 
         A_Sched_Ctd_from = 'WICS_countschedule cs INNER JOIN ' + VIEW_Material_sql
         A_Sched_Ctd_from += ' INNER JOIN (SELECT * FROM WICS_actualcounts WHERE not LocationOnly) ac '
@@ -203,7 +212,7 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
         if A_Sched_Ctd_where:
             A_Sched_Ctd_sql += ' AND ' + A_Sched_Ctd_where
         A_Sched_Ctd_sql += ' ORDER BY ' + order_by
-        A_Sched_Ctd_qs = CountSchedule.objects.using(dbUsing).raw(A_Sched_Ctd_sql)
+        A_Sched_Ctd_qs = app_db.session.execute(text(A_Sched_Ctd_sql)).scalars().all()
         # build display lines
         ttl = 'Scheduled and Counted'
         if Rptvariation == 'REQ':
@@ -225,7 +234,7 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
                 ' WHERE NOT ac.LocationOnly AND ' + date_condition + ' AND ' + org_condition + \
                 ' AND ' + B_UnSched_Ctd_where + \
                 ' ORDER BY ' + order_by
-            B_UnSched_Ctd_qs = CountSchedule.objects.using(dbUsing).raw(B_UnSched_Ctd_sql)
+            B_UnSched_Ctd_qs = app_db.session.execute(text(B_UnSched_Ctd_sql)).scalars().all()
             SummaryReport.append({
                         'org':org,
                         'Title':'UnScheduled',
@@ -246,7 +255,7 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
         if C_Sched_NotCtd_Ctd_where:
             C_Sched_NotCtd_Ctd_sql += ' AND ' + C_Sched_NotCtd_Ctd_where
         C_Sched_NotCtd_Ctd_sql += ' ORDER BY ' + order_by
-        C_Sched_NotCtd_Ctd_qs = CountSchedule.objects.using(dbUsing).raw(C_Sched_NotCtd_Ctd_sql)
+        C_Sched_NotCtd_Ctd_qs = app_db.session.execute(text(C_Sched_NotCtd_Ctd_sql)).scalars().all()
         ttl = 'Scheduled but Not Counted'
         if Rptvariation == 'REQ':
             ttl = 'Requested but Not Counted'
