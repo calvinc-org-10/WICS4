@@ -199,7 +199,7 @@
 
             thisMtlGPN = this.value
 
-            newRec = "{% url 'CountScheduleForm' 0 'passedCountDate' 'passedMatlNum' %}"
+            newRec = "{% url 'WICS.CountScheduleForm' 0 'passedCountDate' 'passedMatlNum' %}"
             newRec = newRec.replace("/passedMatlNum","/"+thisMtlGPN);
             newRec = newRec.replace("/passedCountDate","/"+dVal);
             window.open(newRec,'_blank')
@@ -214,9 +214,9 @@
 
     function newCtDate() {
         {% if variation is None %}
-        var newRec = "{{ url_for('CountSummaryReport-dt',passedCountDate='PCD') }}".replace('/PCD','/'+ctDate_elmnt.value);
+        var newRec = "{{ url_for('WICS.CountSummaryReport-dt',passedCountDate='PCD') }}".replace('/PCD','/'+ctDate_elmnt.value);
         {% else %}
-        var newRec = "{{ url_for( 'CountSummaryReport-v-dt',Rptvariation='VARI',passedCountDate='PCD') }}"
+        var newRec = "{{ url_for( 'WICS.CountSummaryReport-v-dt',Rptvariation='VARI',passedCountDate='PCD') }}"
             .replace('/PCD','/'+ctDate_elmnt.value)
             .replace('/VARI','/{{variation}}')
         {% endif %}

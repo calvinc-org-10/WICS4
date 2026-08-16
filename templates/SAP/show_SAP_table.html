@@ -103,7 +103,7 @@
         dVal = gotoTextBox.value.replace(" ","%20");
 
         alert("I'll fix this later...");
-        newRec = "{{ url_for('showtable-SAP-dt', passedDate='passedDate') }}";
+        newRec = "{{ url_for('WICS.showtable-SAP-dt', passedDate='passedDate') }}";
         newRec = newRec.replace("/passedDate","/"+dVal);
         window.location = newRec;
 
