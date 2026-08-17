@@ -119,6 +119,11 @@ def define_routes(flskapp):
     ### Count Summary Report routes
     #########################
     from views.ActualCounts import rptCountSummary
+    WICS_bp.add_url_rule('/CountSummaryRpt',
+        view_func=rptCountSummary.fnCountSummaryRpt, 
+        methods=['GET'], 
+        endpoint='CountSummaryReport',
+        )
     WICS_bp.add_url_rule('/CountSummaryRpt/v/REQ',
         view_func=rptCountSummary.fnCountSummaryReqRpt, 
         methods=['GET'], 
@@ -133,11 +138,6 @@ def define_routes(flskapp):
         view_func=rptCountSummary.fnCountSummaryRpt, 
         methods=['GET'], 
         endpoint='CountSummaryReport-v-dt',
-        )
-    WICS_bp.add_url_rule('/CountSummaryRpt',
-        view_func=rptCountSummary.fnCountSummaryRpt, 
-        methods=['GET'], 
-        endpoint='CountSummaryReport',
         )
     WICS_bp.add_url_rule('/CountSummaryRpt/<string:passedCountDate>',
         view_func=rptCountSummary.fnCountSummaryRpt, 

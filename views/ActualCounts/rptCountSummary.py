@@ -276,7 +276,8 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
 
     ExcelFileNamePrefix = "CountSummary "
     svdir = current_app.config.get('SAP_FILELOC', os.getcwd())
-    fName_base = '/tmpdl/'+ExcelFileNamePrefix + f'{dtobj_pDate:%Y-%m-%d}'
+    os.makedirs(svdir+'tmpdl', exist_ok=True)
+    fName_base = 'tmpdl/'+ExcelFileNamePrefix + f'{dtobj_pDate:%Y-%m-%d}'
     fName = svdir + fName_base
     ExcelFileName = Excelfile_fromqs(Excel_qdict, fName)
 
@@ -291,5 +292,5 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
             'ExcelFileName': fName_base+ExcelWorkbook_fileext,
             }
     templt = 'ActualCounts/rpt_CountSummary.html'
-    return checkTemplate_and_render(templt, cntext)
+    return checkTemplate_and_render(templt, **cntext)
 
