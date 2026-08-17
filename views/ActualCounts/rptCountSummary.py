@@ -15,7 +15,7 @@ from calvincTools.utils import (
     )
 
 from database import app_db
-from models import Organizations, CountSchedule
+from models import Organizations, ActualCounts, CountSchedule
 
 from views.SAP import fnSAPList
 
@@ -43,6 +43,14 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
     dtobj_pDate = coerce_date(passedCountDate)
     SAP_SOH = fnSAPList(dtobj_pDate)
 
+    ## construct list of dates counts actually occurred, for use in the dropdown on the report page, and to find the most recent date if passedCountDate is 'CURRENT_DATE'
+    stmt = select(ActualCounts.CountDate).distinct().order_by(ActualCounts.CountDate.desc())
+    countDatesRaw = app_db.session.execute(stmt).scalars().all()
+    _myDtFmt = current_app.config.get('DEFAULT_DATEFORMAT', '%Y-%m-%d')
+    countDates = [D.strftime(_myDtFmt) for D in countDatesRaw]
+    # correct dtobj_pDate to the most recent date in countDatesRaw <= passedCountDate
+    dtobj_pDate = [D for D in countDatesRaw if D <= dtobj_pDate][0] if countDatesRaw else dtobj_pDate
+
     # prep Excel_qdict.  It's up here so that the functions below have access to it
     Excel_qdict = []
 
@@ -54,8 +62,8 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
             outputline = dict()
             outputline['type'] = 'Summary'
             outputline['SAPNum'] = []
-            for SAProw in SAP_SOH['SAPTable'].filter(Material_id=lastrow['Material_id']):
-                outputline['SAPNum'].append((SAProw.StorageLocation, SAProw.Amount, SAProw.BaseUnitofMeasure))
+            for SAProw in [saprow for saprow in SAP_SOH['SAPTable'] if saprow.Material_id==lastrow['Material_id']]:
+                outputline['SAPNum'].append((SAProw.StorageLocation, format(SAProw.Amount,".2f"), SAProw.BaseUnitofMeasure))
                 SAPTot += SAProw.Amount*SAProw.mult
             outputline['TypicalContainerQty'] = lastrow['TypicalContainerQty']
             outputline['TypicalPalletQty'] = lastrow['TypicalPalletQty']
@@ -188,8 +196,7 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
         ", mtl.id as matl_id, mtl.org_id, mtl.OrgName" \
         ", mtl.Material_org as Matl_PartNum, mtl.PartType as PartType" \
         ", mtl.Description, mtl.TypicalContainerQty, mtl.TypicalPalletQty, mtl.Notes as mtl_Notes"
-    if IsDateString(str(passedCountDate)): datestr = WrapInQuotes(passedCountDate,"'","'")
-    else: datestr = passedCountDate
+    datestr = WrapInQuotes(str(dtobj_pDate),"'","'")
     date_condition = '(ac.CountDate = ' + datestr + ' OR cs.CountDate = ' + datestr + ') '
     order_by = 'Matl_PartNum'
 
@@ -215,7 +222,7 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
         if A_Sched_Ctd_where:
             A_Sched_Ctd_sql += ' AND ' + A_Sched_Ctd_where
         A_Sched_Ctd_sql += ' ORDER BY ' + order_by
-        A_Sched_Ctd_qs = app_db.session.execute(text(A_Sched_Ctd_sql)).scalars().all()
+        A_Sched_Ctd_qs = app_db.session.execute(text(A_Sched_Ctd_sql)).all()
         # build display lines
         ttl = 'Scheduled and Counted'
         if Rptvariation == 'REQ':
@@ -237,7 +244,7 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
                 ' WHERE NOT ac.LocationOnly AND ' + date_condition + ' AND ' + org_condition + \
                 ' AND ' + B_UnSched_Ctd_where + \
                 ' ORDER BY ' + order_by
-            B_UnSched_Ctd_qs = app_db.session.execute(text(B_UnSched_Ctd_sql)).scalars().all()
+            B_UnSched_Ctd_qs = app_db.session.execute(text(B_UnSched_Ctd_sql)).all()
             SummaryReport.append({
                         'org':org,
                         'Title':'UnScheduled',
@@ -258,7 +265,7 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
         if C_Sched_NotCtd_Ctd_where:
             C_Sched_NotCtd_Ctd_sql += ' AND ' + C_Sched_NotCtd_Ctd_where
         C_Sched_NotCtd_Ctd_sql += ' ORDER BY ' + order_by
-        C_Sched_NotCtd_Ctd_qs = app_db.session.execute(text(C_Sched_NotCtd_Ctd_sql)).scalars().all()
+        C_Sched_NotCtd_Ctd_qs = app_db.session.execute(text(C_Sched_NotCtd_Ctd_sql)).all()
         ttl = 'Scheduled but Not Counted'
         if Rptvariation == 'REQ':
             ttl = 'Requested but Not Counted'
@@ -284,6 +291,7 @@ def fnCountSummaryRpt (passedCountDate='CURRENT_DATE', Rptvariation=None):
     # display the form
     cntext = {
             'variation': Rptvariation,
+            'CountDateList': countDates,
             'CountDate': dtobj_pDate,
             'SAPDate': SAP_SOH['SAPDate'],
             'AccuracyCutoff': AccuracyCutoff,

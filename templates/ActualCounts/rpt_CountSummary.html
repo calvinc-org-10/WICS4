@@ -9,8 +9,16 @@
     }
 {% endblock %}
 {% block formName %}
-    <span class="fs-3">{{ CountDate|format("%Y-%m-%d") }} <input id="CtDate" type="Date" value="{{ CountDate|format('%Y-%m-%d') }}" onchange="newCtDate();" size="5"></input></span>
-    SAP Date {{ SAPDate }}
+    <span class="fs-3">
+        {{ CountDate.strftime("%A") }} 
+        <select id="CtDate" onchange="newCtDate();">
+            {% for CD in CountDateList %}
+                <option value="{{CD}}" {% if CD == CountDate.strftime("%Y-%m-%d") %} selected{% endif %} >{{CD}}</option>
+            {% endfor %}
+        </select>
+    </span>
+    <br>SAP Date {{ SAPDate }}
+
 {% endblock %}
 
 {% block boddy %}
@@ -31,7 +39,7 @@
                         <div class="col-5 text-start">
                             <img src={{ url_for('static', filename='WICS-Logo.png') }} width="200" height="100">
                         </div>
-                        <div class="col-2 text-end"> {{ user.get_full_name }} </div>
+                        <div class="col-2 text-end"> {{ current_user | string }} </div>
                     </div>
                     <h1><u> {{ RptSection.org.orgname }} </u></h1>
                 </div>    <!-- org header -->
@@ -54,7 +62,7 @@
                 {% endif %}
                 {% if entry.type == 'Detail' %}
                     <div class="row g-0 calvin-smalltext">
-                        <div class="col-1">{{ CountDate|format("%m/%d") }}</div>
+                        <div class="col-1">{{ CountDate.strftime("%m/%d") }}</div>
                         <div class="col-2">{{ entry.Material }}</div>
                         <div class="col-3">{{ entry.ActCounter }}</div>
                         <div class="col-2">{{ entry.LOCATION }}</div>
@@ -214,7 +222,7 @@
     //---------
 
     function newCtDate() {
-        {% if variation is None %}
+        {% if variation is none %}
         var newRec = "{{ url_for('WICS.CountSummaryReport-dt',passedCountDate='PCD') }}".replace('/PCD','/'+ctDate_elmnt.value);
         {% else %}
         var newRec = "{{ url_for( 'WICS.CountSummaryReport-v-dt',Rptvariation='VARI',passedCountDate='PCD') }}"
