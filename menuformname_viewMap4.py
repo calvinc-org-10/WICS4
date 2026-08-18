@@ -20,10 +20,8 @@ FormNameToURL_Map = {}
 # FormNameToURL_Map['l6-wics-uadmin'.lower()] = FormNameToURL_Map['l10-wics-uadmin']
 # FormNameToURL_Map['django-admin'.lower()] = (None, LoadAdmin)
 
-FormNameToURL_Map['frmcountentry'.lower()] = (None, views.ActualCounts.fnCountEntryView)
-##FormNameToURL_Map['frmcountentry'.lower()] = ('CountEntryForm', _newcode.frmCountEntryView.fnCountEntryView)
-# FormNameToURL_Map['frmUploadCountEntry'.lower()] = ('WICS.UploadActualCounts', None)
-FormNameToURL_Map['frmUploadCountEntry'.lower()] = (None, views.ActualCounts.upldActCounts.fnUploadActCountSprsht_init)
+FormNameToURL_Map['frmcountentry'.lower()] = ('WICS.CountEntryForm', views.ActualCounts.fnCountEntryView)
+FormNameToURL_Map['frmUploadCountEntry'.lower()] = ('WICS.UploadActualCounts', views.ActualCounts.upldActCounts.fnUploadActCountSprsht_init)
 FormNameToURL_Map['frmcountsummarypreview'.lower()] = ('WICS.CountSummaryReport', None)
 FormNameToURL_Map['frmrequestedcountsummary'.lower()] = ('WICS.CountSummaryReport-v-init', None)
 # FormNameToURL_Map['frmimportsap'.lower()] = ('UploadSAPSprSht', None)
@@ -32,8 +30,7 @@ FormNameToURL_Map['frmmaterial'.lower()] = ('WICS.MaterialForm', None)   # make 
 # FormNameToURL_Map['frmParts-By-Type-with-LastCounts'.lower()] = ('MatlByPartType', None)
 # FormNameToURL_Map['rptMaterialByLastCount'.lower()] = ('MatlByLastCountDate', None)
 # FormNameToURL_Map['rptMaterialByDESCValue'.lower()] = ('MatlByDESCValue', None)
-# FormNameToURL_Map['matllistupdt'.lower()] = ('UpdateMatlListfromSAP', _newcode.updtMatlList.fnUpdateMatlListfromSAP)
-FormNameToURL_Map['matllistupdt'.lower()] = (None, views.Material.updtMatlList.fnUpdateMatlListfromSAP_init)
+FormNameToURL_Map['matllistupdt'.lower()] = ('UpdateMatlListfromSAP', views.Material.updtMatlList.fnUpdateMatlListfromSAP_init)
 # FormNameToURL_Map['frmRandCountScheduler'.lower()] = (None, None)
 
 # FormNameToURL_Map['frmCountScheduleEntry'.lower()] = ('CountScheduleForm', forms.CountScheduleRecordForm)
@@ -54,3 +51,4 @@ FormNameToURL_Map['sap'.lower()] = ('WICS.showtable-SAP', None)
 FormNameToURL_Map['test01'.lower()] = ('', _newcode.test_xl_read.test_read)
 FormNameToURL_Map['test02'.lower()] = ('', None)
 # FormNameToURL_Map['test02'.lower()] = ('', None)
+    
