@@ -43,7 +43,7 @@ class Config:
 
     # this is a default value for new user password,
     # should be changed in production and moved to app_secrets.py or environment variable for better security
-    NEWUSER_DEFAULT_PW = 'TempPassword123!'
+    NEWUSER_DEFAULT_PW = getattr(app_secrets, 'newuser_default_PW', 'TempPassword123!')
 
     USER_AUTHENTICATION_ENABLED = getattr(app_secrets, 'usr_authentication_enabled', True)  # default to True if not specified in app_secrets
     # debugging - how to load calvincTools templates in subdirectories
@@ -82,5 +82,4 @@ config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
     'testing': TestingConfig,
-    'default': DevelopmentConfig
 }
