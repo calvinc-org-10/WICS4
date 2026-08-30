@@ -1,0 +1,52 @@
+{% extends "ActualCounts/frm_CountEntry.html" %}
+
+{% block postFormScripts %}
+{{ super() }}
+<script>
+    const submittedMaterialId = document.createElement("input");
+    submittedMaterialId.type = "hidden";
+    submittedMaterialId.id = "{{ frmMain.Material_id.id }}";
+    submittedMaterialId.name = "{{ frmMain.Material_id.name }}";
+    submittedMaterialId.value = "{{ frmMain.Material_id.data or '' }}";
+    document.getElementById("CEForm").appendChild(submittedMaterialId);
+
+    function syncMaterialKey() {
+        if (!isValid_Material()) {
+            submittedMaterialId.value = "";
+            return false;
+        }
+        submittedMaterialId.value = MatlMap.get(mtlnmID.value);
+        return true;
+    }
+
+    function loadExtraInfo() {
+        if (!isValid_Date()) {
+            alertBox("Invalid Date", ctdtID.value + " is not a valid date");
+            ctdtID.focus();
+            return;
+        }
+        const countDate = (new Date(ctdtID.value)).toISOString().substring(0, 10);
+        ctdtID.value = countDate;
+
+        if (!syncMaterialKey()) {
+            if (mtlnmID.value != "") {
+                alertBox("Invalid Material", mtlnmID.value + " is not a valid Material number");
+            }
+            mtlnmID.focus();
+            return;
+        }
+
+        window.location = `${countEntryBaseUrl}/${getCurrentRecNum()}/${countDate}/${submittedMaterialId.value}`;
+    }
+
+    const submitCountEntryForm = SubmMainFm;
+    function SubmMainFm() {
+        if (!syncMaterialKey()) {
+            alertBox("Invalid Material", "Please select a Material from the list.");
+            mtlnmID.focus();
+            return;
+        }
+        submitCountEntryForm();
+    }
+</script>
+{% endblock postFormScripts %}

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime, date
 
 from flask_login import login_required, current_user
@@ -57,7 +57,7 @@ def fnCountEntryView(
     }
 
     # process main form
-    mainFm = FormMain(prefix=prefixvals['main'], obj=initialobj['main'])   # Note that you don’t have to pass request.form to Flask-WTF; it will load automatically. And the convenient validate_on_submit will check if it is a POST request and if it is valid.
+    mainFm = FormMain(prefix=prefixvals['main'], obj=initialobj['main'])   # Note that you don't have to pass request.form to Flask-WTF; it will load automatically. And the convenient validate_on_submit will check if it is a POST request and if it is valid.
     matlSubFm = FormSubs['matl'](prefix=prefixvals['matl'], obj=initialobj['matl'])
     schedSet = FormSubs['schedule'](prefix=prefixvals['schedule'], obj=initialobj['schedule'])
 
@@ -74,52 +74,64 @@ def fnCountEntryView(
 
     # if request.method == 'POST' and mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
     if mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
-        formRec = modelMain()
-        mainFm.populate_obj(obj=formRec)
-        recNum = int(getattr(formRec, 'id', 0) or 0)
-        currRec = app_db.session.get(modelMain, recNum) or modelMain()
+        postedRecNum = int(mainFm.id.data or 0)
+        if postedRecNum > 0:
+            currRec = app_db.session.get(modelMain, postedRecNum)
+            if currRec is None:
+                abort(404)
+        else:
+            currRec = modelMain()
 
-        matlformRec = modelSubs['matl']()
-        matlSubFm.populate_obj(obj=matlformRec)
-        matlRecNum = int(getattr(matlformRec, 'id', 0))
-        model_class = modelSubs['matl']
-        matlRec = app_db.session.get(model_class, matlRecNum) or model_class()
+        try:
+            matlRecNum = int(mainFm.Material_id.data or 0)
+        except (TypeError, ValueError):
+            matlRecNum = 0
+        matlRec = app_db.session.get(modelSubs['matl'], matlRecNum) if matlRecNum > 0 else None
+        if matlRec is None:
+            mainFm.Material_id.errors.append('Select a valid Material.')
+            return checkTemplate_and_render(
+                'ActualCounts/frm_CountEntry_NEW.html',
+                frmMain=mainFm,
+                newRecord_flag=(postedRecNum == 0),
+                frmMatlInfo=matlSubFm,
+                todayscounts=None,
+                matlchoiceForm={'gotoItem': '', 'choicelist': []},
+                noSchedInfo=True,
+                frmSchedInfo=schedSet,
+                changes_saved=changes_saved,
+                changed_data=chgd_dat,
+            )
+
+        before_main = {
+            field.short_name: getattr(currRec, field.short_name)
+            for field in mainFm
+            if field.short_name != 'csrf_token' and hasattr(currRec, field.short_name)
+        }
+        mainFm.populate_obj(currRec)
+        currRec.id = postedRecNum or None
+        currRec.Material_id = matlRecNum
+
+        chgd_dat['main'] = [
+            f'{field}={getattr(currRec, field)}'
+            for field, oldValue in before_main.items()
+            if getattr(currRec, field) != oldValue
+        ]
+        if postedRecNum == 0:
+            chgd_dat['main'].append('new record')
+
+        if chgd_dat['main']:
+            app_db.session.add(currRec)
+            app_db.session.commit()
+            changes_saved['main'] = currRec.id
 
         # Description is display-only in this subform; keep persisted value on POST.
         if hasattr(matlSubFm, 'Description'):
             matlSubFm.Description.data = getattr(matlRec, 'Description', None)
 
-        #schedRecs = modelSubs[schdSubIndx].objects.filter(org=_userorg, CountDate=req.POST[prefixvals['main']+'-CountDate'], Material=matlRec)
-
-        # what's changed in main form?
-        chgd_dat['main'] = [
-            f'{field.short_name}={field.data}' 
-            for field in mainFm if hasattr(currRec, field.short_name) and getattr(currRec, field.short_name) != field.data
-        ]
-        if len(chgd_dat['main']) > 0:
-            formRec.save()
-            changes_saved['main'] = formRec.id
-
         # now changes to material record
         chgd_dat['matl'] = ["changes to material record not supported at this time"]
-        # chgd_dat['matl'] = [
-        #     f'{field.short_name}={field.data}'
-        #     for field in matlSubFm
-        #     if field.short_name != 'Description'
-        #     and hasattr(matlRec, field.short_name)
-        #     and getattr(matlRec, field.short_name) != field.data
-        # ]
-        # if len(chgd_dat['matl']) > 0:
-        #     matlformRec.save()
-        #     changes_saved['matl'] = matlRec.id
 
-        # count schedule subform
-        # if schedSet.has_changed():
-        #      schedSet.save()
-        #      chgd_dat['schedule'] = schedSet.changed_data
-        #      changes_saved['schedule'] = True
-
-        # we build the new record to present. We don't want to carry any POST state forward, but we do want to show the user the record they just saved. 
+        # we build the new record to present. We don't want to carry any POST state forward, but we do want to show the user the record they just saved.
         # We use the post-if POST/GET logic here so that changes_saved and chgd_dat will be passed into context.
         currRec = initialobj['main']
         matlRec = initialobj['matl']
@@ -159,17 +171,22 @@ def fnCountEntryView(
             except Exception:
                 recNum = 0
         elif gotoCommand == 'ChgKey':
-            # if currRec:
-            #     currRec.CountDate = reqDate
-            #     matlRec = modelSubs[matlSubIndx].query.get(MatlNum)
-            #     currRec.Material_id = MatlNum
-            #     currRec.Material = matlRec
             pass
         else:
             raise ValueError(f"Invalid gotoCommand: {gotoCommand}")
         # endif gotoCommand
 
-        currRec = app_db.session.get(modelMain, recNum) or initialobj['main']
+        savedRec = app_db.session.get(modelMain, recNum)
+        if savedRec is None:
+            currRec = initialobj['main']
+        elif ((reqDate is not None and reqDate != savedRec.CountDate)
+                or (MatlNum != 0 and MatlNum != savedRec.Material_id)):
+            currRec = modelMain(
+                **{column.name: getattr(savedRec, column.name) for column in savedRec.__table__.columns}
+            )
+            currRec.CountDate = reqDate or savedRec.CountDate
+        else:
+            currRec = savedRec
 
         if MatlNum != 0 and MatlNum != currRec.Material_id:
             currRec.Material_id = MatlNum
@@ -238,5 +255,5 @@ def fnCountEntryView(
             'changes_saved': changes_saved,
             'changed_data': chgd_dat,
             }
-    templt = 'ActualCounts/frm_CountEntry.html'
+    templt = 'ActualCounts/frm_CountEntry_NEW.html'
     return checkTemplate_and_render(templt, **cntext)
