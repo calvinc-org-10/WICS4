@@ -17,21 +17,13 @@ from calvincTools.utils import (
 from database import app_db
 from models import Organizations, ActualCounts, CountSchedule
 
+from calvincTools.utils import coerce_float
 from views.SAP import fnSAPList
 
 
 #####################################################################
 #####################################################################
 #####################################################################
-
-# add this to cMenu.utils later
-def coerce_float(x) -> float:
-    if isinstance(x,(float, int)):
-        return float(x)
-    if isinstance(x,str) and x.isnumeric():
-        return float(x)
-
-    return 0.0
 
 @login_required
 def fnCountSummaryReqRpt(passedCountDate='CURRENT_DATE'):
