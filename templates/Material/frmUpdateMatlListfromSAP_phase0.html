@@ -244,38 +244,51 @@ function setFatalError(message) {
     fatalErrMsg.textContent = message;
 }
 
+let progressInterval = null;
+const pollingInterval = 2000;       // 2 seconds
+
 function startProgressStream(reqid) {
-    if (progressStream) {
-        progressStream.close();
+    if (progressInterval) {
+        clearInterval(progressInterval);
     }
 
     const eSource_tmpurl = "{{ url_for('SSE.progress_UplSprSht', reqid='XXJOBIDXX') }}";
     const eSource_url = eSource_tmpurl.replace("XXJOBIDXX", reqid);
-    progressStream = new EventSource(eSource_url);
+    
+    progressInterval = setInterval(() => {
+        fetch(eSource_url)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response error');
+                return response.text(); // Read raw text stream data
+            })
+            .then(rawText => {
+                const jsonMatch = rawText.match(/data:\s*({.+})/);
+                if (!jsonMatch) return;
 
-    progressStream.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        uploadStatus.innerHTML = data.statetext || "";
-        retStatecodeEl.innerHTML = data.statecode || "";
+                const data = JSON.parse(jsonMatch[1]);
 
-        if (data.statecode === "fatalerr") {
-            progressStream.close();
-            progressStream = null;
-            stopWaitSpinner();
-            setFatalError(data.statetext || "Upload failed.");
-            nextBtn.disabled = false;
-        }
+                uploadStatus.innerHTML = data.statetext || "";
+                retStatecodeEl.innerHTML = data.statecode || "";
 
-        if (data.statecode === "done") {
-            progressStream.close();
-            progressStream = null;
-        }
-    };
+                if (data.statecode === "fatalerr") {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                    stopWaitSpinner();
+                    setFatalError(data.statetext || "Upload failed.");
+                    nextBtn.disabled = false;
+                }
 
-    progressStream.onerror = () => {
-        progressStream.close();
-        progressStream = null;
-    };
+                if (data.statecode === "done") {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+            })
+            .catch(error => {
+                console.error("Polling error:", error);
+                clearInterval(progressInterval);
+                progressInterval = null;
+            });
+    }, pollingInterval);
 }
 
 
