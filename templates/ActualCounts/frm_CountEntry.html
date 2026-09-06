@@ -80,6 +80,7 @@
                     {% endfor %}
                 </datalist>
             </div>
+            {{ frmMain.Material_id }}   
             <div class="col-3">Actual Ctr: {{ frmMain.Counter(class="need-Matl-Dt border border-5 border-danger fw-bold", size="12") }}</div>
             <div class="col-1">LocOnly:{{ frmMain.LocationOnly(class="need-Matl-Dt", onchange="SkipCountIfLocationOnly();") }}
                 {# onchange="" #}  <!-- skip CTD_QTY if clicked -->
@@ -245,6 +246,7 @@
     var forms = document.getElementById("CEForm").querySelectorAll(":scope input");
     const ctdtID = document.getElementById("{{frmMain.CountDate.id}}");
     const orig_ctdt = ctdtID.value;
+    const submittedMaterialId = document.getElementById("{{ frmMain.Material_id.id }}");
     const mtlnmID = document.getElementById("Material-input-visible");
     const orig_matl = mtlnmID.value;
     const mtlnmbrID = document.getElementById("{{frmMain.Material_id.id}}");
@@ -389,32 +391,35 @@
 
     }
 
-    function loadExtraInfo() {
-        let dVal;
+    function syncMaterialKey() {
+        if (!isValid_Material()) {
+            submittedMaterialId.value = "";
+            return false;
+        }
+        submittedMaterialId.value = MatlMap.get(mtlnmID.value);
+        return true;
+    }
 
+    function loadExtraInfo() {
         if (!isValid_Date()) {
             alertBox("Invalid Date", ctdtID.value + " is not a valid date");
             ctdtID.focus();
             return;
         }
-        else {
-            dVal = (new Date(ctdtID.value)).toISOString().substring(0,10)
-        }
-        // if (typeof(dVal) == 'string') { dVal = new Date(dVal) };
-        // dVal =  dtstr(dt = dVal, fmt = "YYYY-MM-DD")
-        ctdtID.value = dVal
 
-        if (!isValid_Material()) {
-            if (mtlnmID.value != "") { alertBox("Invalid Material", mtlnmID.value + " is not a valid Material number"); }
+        const countDate = (new Date(ctdtID.value)).toISOString().substring(0, 10);
+        ctdtID.value = countDate;
+
+        if (!syncMaterialKey()) {
+            if (mtlnmID.value != "") {
+                alertBox("Invalid Material", mtlnmID.value + " is not a valid Material number");
+            }
             mtlnmID.focus();
             return;
-        } 
+        }
 
-        const R = getCurrentRecNum();
-        let mNum = "None";
-        if (mtlnmID.value != "") { mNum = MatlMap.get(mtlnmID.value); }
-        const newRec = `${countEntryBaseUrl}/${R}/${dVal}/${mNum}`;
-        window.location = newRec;
+        window.location = `${countEntryBaseUrl}/${getCurrentRecNum()}/${countDate}/${submittedMaterialId.value}`;
+
     };
     function loadCountEntryRec(goDir) {
         const R = getCurrentRecNum();
@@ -436,6 +441,13 @@
     };
 
     function SubmMainFm() {
+
+        if (!syncMaterialKey()) {
+            alertBox("Invalid Material", "Please select a Material from the list.");
+            mtlnmID.focus();
+            return;
+        }
+
         let formGood = true;
 
         const countDate = document.getElementById("{{ frmMain.CountDate.id }}");
