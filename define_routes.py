@@ -33,21 +33,25 @@ def define_routes(flskapp):
     #########################
     from views.ActualCounts.frmCountEntryView import fnCountEntryView
     
+    # initial form load
     WICS_bp.add_url_rule('/CountEntryForm', 
         view_func=fnCountEntryView, 
         methods=['GET', 'POST'], 
         endpoint='CountEntryForm'
         )
+    # go to a specific record; recNum is record to go to
     WICS_bp.add_url_rule('/CountEntryForm/Go/<int:recNum>',
         view_func=fnCountEntryView,
         methods=['GET','POST'],
         endpoint='CountEntryFormGo'
         )
+    # go to a record via a command like Prev, Next, First, etc; recNum is record coming from
     WICS_bp.add_url_rule('/CountEntryForm/Go/<int:recNum>/<string:gotoCommand>',
         view_func=fnCountEntryView,
         methods=['GET','POST'],
         endpoint='CountEntryFormGo_Command'
         )
+    # change key for a specific record; recNum is record to change, reqDate is requested date, MatlNum is material number
     WICS_bp.add_url_rule('/CountEntryForm/<int:recNum>/<string:reqDate>/<string:MatlNum>',
         view_func=fnCountEntryView,
         methods=['GET','POST'],

@@ -26,12 +26,17 @@ def fnCountEntryView(
         gotoCommand = None
         ):
 
+    # flags indicating whether key parameters were given
+    MatlNumPassed = MatlNum is not None
+    reqDatePassed = reqDate is not None
+    recNumPassed = recNum is not None
+    
     # defauls parms
-    if recNum is None: recNum = 0
+    if not recNumPassed: recNum = 0
     reqDate = coerce_date(reqDate)
 
     # the string 'None' is not the same as the value None
-    if MatlNum=='None' or MatlNum is None: MatlNum=0
+    if MatlNum=='None' or not MatlNumPassed: MatlNum=0
     if gotoCommand=='None': gotoCommand=None
 
     FormMain = CountEntryForm
@@ -61,11 +66,6 @@ def fnCountEntryView(
     matlSubFm = FormSubs['matl'](prefix=prefixvals['matl'], obj=initialobj['matl'])
     schedSet = FormSubs['schedule'](prefix=prefixvals['schedule'], obj=initialobj['schedule'])
 
-    changes_saved:Dict[str, Any] = {
-        'main': False,
-        'matl': False,
-        'schedule': False
-        }
     chgd_dat = {
         'main': [],
         'matl': [],
@@ -90,7 +90,7 @@ def fnCountEntryView(
         if matlRec is None:
             flash('Select a valid Material.', 'error')
             return checkTemplate_and_render(
-                'ActualCounts/frm_CountEntry_NEW.html',
+                'ActualCounts/frm_CountEntry.html',
                 frmMain=mainFm,
                 newRecord_flag=(postedRecNum == 0),
                 frmMatlInfo=matlSubFm,
@@ -98,7 +98,6 @@ def fnCountEntryView(
                 matlchoiceForm={'gotoItem': '', 'choicelist': []},
                 noSchedInfo=True,
                 frmSchedInfo=schedSet,
-                changes_saved=changes_saved,
                 changed_data=chgd_dat,
             )
 
@@ -123,7 +122,6 @@ def fnCountEntryView(
         if chgd_dat['main']:
             app_db.session.add(currRec)
             app_db.session.commit()
-            changes_saved['main'] = currRec.id
 
         # Description is display-only in this subform; keep persisted value on POST.
         if hasattr(matlSubFm, 'Description'):
@@ -133,7 +131,7 @@ def fnCountEntryView(
         chgd_dat['matl'] = ["changes to material record not supported at this time"]
 
         # we build the new record to present. We don't want to carry any POST state forward, but we do want to show the user the record they just saved.
-        # We use the post-if POST/GET logic here so that changes_saved and chgd_dat will be passed into context.
+        # We use the post-if POST/GET logic here so that chgd_dat will be passed into context.
         currRec = initialobj['main']
         matlRec = initialobj['matl']
 
@@ -180,8 +178,9 @@ def fnCountEntryView(
         savedRec = app_db.session.get(modelMain, recNum)
         if savedRec is None:
             currRec = initialobj['main']
-        elif ((reqDate is not None and reqDate != savedRec.CountDate)
-                or (MatlNum != 0 and MatlNum != savedRec.Material_id)):
+        elif ((reqDatePassed and reqDate != savedRec.CountDate)
+                or (MatlNumPassed and MatlNum != savedRec.Material_id)):
+            # review this logic
             currRec = modelMain(
                 **{column.name: getattr(savedRec, column.name) for column in savedRec.__table__.columns}
             )
@@ -189,7 +188,7 @@ def fnCountEntryView(
         else:
             currRec = savedRec
 
-        if MatlNum != 0 and MatlNum != currRec.Material_id:
+        if MatlNumPassed and MatlNum != currRec.Material_id:
             currRec.Material_id = MatlNum
         model_class = modelSubs['matl']
         matlRecNum = int(getattr(currRec, 'Material_id', 0) or 0)
@@ -253,8 +252,7 @@ def fnCountEntryView(
             'matlchoiceForm':matlchoiceForm,
             'noSchedInfo':(not schedinfo),
             'frmSchedInfo': schedFm,
-            'changes_saved': changes_saved,
             'changed_data': chgd_dat,
             }
-    templt = 'ActualCounts/frm_CountEntry_NEW.html'
+    templt = 'ActualCounts/frm_CountEntry.html'
     return checkTemplate_and_render(templt, **cntext)

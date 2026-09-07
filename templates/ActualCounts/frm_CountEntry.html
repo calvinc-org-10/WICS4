@@ -6,7 +6,7 @@
     {% if changed_data.main|count > 0 %}
         <div class="alert alert-success p-0 alert-dismissible fade show">
             <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
-            Count record {{ changes_saved.main }} successfully saved.
+            Count record { { put record number here } } successfully saved.
             <span class="d-none d-md-inline">
             ChData: {{ changed_data.main }}
             </span>
@@ -251,7 +251,6 @@
     const orig_matl = mtlnmID.value;
     const mtlnmbrID = document.getElementById("{{frmMain.Material_id.id}}");
     const orig_matl_id = mtlnmbrID.value;
-    const countEntryBaseUrl = "{{ url_for('WICS.CountEntryForm') }}";
     let initialState;
     // set up MatlMap for verifying if an entered Material # is valid
     var MatlMap = new Map(
@@ -418,12 +417,15 @@
             return;
         }
 
-        window.location = `${countEntryBaseUrl}/${getCurrentRecNum()}/${countDate}/${submittedMaterialId.value}`;
+        const countEntryBaseUrl = "{{ url_for('WICS.CountEntryForm_ChgKey', recNum=0, reqDate='RDATE', MatlNum='MATLNUM') }}";
+        const newloc = countEntryBaseUrl.replace('/0/',`/${getCurrentRecNum()}/`).replace('RDATE',`${countDate}`).replace('MATLNUM',`${submittedMaterialId.value}`);
+        window.location = newloc;
 
     };
     function loadCountEntryRec(goDir) {
+        const countEntryBaseUrl = "{{ url_for('WICS.CountEntryFormGo_Command', recNum=0, gotoCommand='GOCMD') }}";
         const R = getCurrentRecNum();
-        const newRec = `${countEntryBaseUrl}/Go/${R}/${goDir}`;
+        const newRec = countEntryBaseUrl.replace('/0/',`/${R}`).replace('GOCMD',`${goDir}`);
         window.location = newRec;
     };
 
