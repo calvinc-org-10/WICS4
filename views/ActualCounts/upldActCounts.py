@@ -20,7 +20,7 @@ from openpyxl.utils.datetime import from_excel, WINDOWS_EPOCH
 
 from calvincTools.mathexpr_parser import evaluate
 from calvincTools.utils import (
-    coerce_date,
+    coerce_date, coerce_bool,
     ExcelWorkbook_fileext,
     checkTemplate_and_render,
     )
@@ -30,33 +30,6 @@ from models import (
     UploadSAPResults, ActualCounts, MaterialList,
     async_comm,
     )
-
-#### move to calvincTools.utils
-def coerce_bool(val):
-    if isinstance(val, bool):
-        return val
-    elif isinstance(val, str):
-        val = val.strip().lower()
-        if val in ['true','t','yes','y','1']:
-            return True
-        elif val in ['false','f','no','n','0']:
-            return False
-        else:
-            return True
-            # raise ValueError(f"Cannot coerce {val} to boolean")
-    elif isinstance(val, int):
-        return val != 0
-        # if val == 1:
-        #     return True
-        # elif val == 0:
-        #     return False
-        # else:
-        #     raise ValueError(f"Cannot coerce {val} to boolean")
-    elif val is None:
-        return False
-    else:
-        return True
-        # raise ValueError(f"Cannot coerce {val} to boolean")
 
 ##############################################################
 ##############################################################

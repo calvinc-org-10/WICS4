@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload, aliased
 
 from calvincTools.utils import (
     checkTemplate_and_render,
-    coerce_date,
+    coerce_date, coerce_int,
     )
 from calvincTools.mathexpr_parser import eval_arith
 
@@ -120,12 +120,6 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
         def errors(self):
             return [fm.errors for fm in self]
 
-    def _coerce_int(value, default=0):
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return default
-
     def _is_empty_value(value):
         if value is None:
             return True
@@ -212,7 +206,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
             ).scalars().first() or initialrec['main']
     
     elif flow_case == FlowCase.CHANGE_RECORD:
-        form_rec_id = _coerce_int(request.form.get(f"{prefixvals['main']}-id", 0), default=0)
+        form_rec_id = coerce_int(request.form.get(f"{prefixvals['main']}-id", 0), default=0)
         # initial load of currRec based on the form's submitted ID
         if form_rec_id > 0:
             currRec = app_db.session.execute(
@@ -237,7 +231,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
 
             if all_subforms_valid:
                 # process main form first
-                main_form_rec_id = _coerce_int(getattr(mainFm.id, 'data', 0), default=0)
+                main_form_rec_id = coerce_int(getattr(mainFm.id, 'data', 0), default=0)
                 dbRec_main = app_db.session.get(modelSubs['main'], main_form_rec_id) if main_form_rec_id > 0 else None
                 if dbRec_main is None:
                     dbRec_main = modelSubs['main']()
@@ -280,7 +274,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
                     tracked_fields = [f for f in FormFieldsSubs[subform_key] if f != 'id']      #???
 
                     for sbfm in mainFm.subforms[subform_key]:
-                        row_id = _coerce_int(getattr(getattr(sbfm, 'id', None), 'data', 0), default=0)
+                        row_id = coerce_int(getattr(getattr(sbfm, 'id', None), 'data', 0), default=0)
                         is_new = row_id <= 0
 
                         if is_new and not _has_meaningful_input(sbfm, tracked_fields):
