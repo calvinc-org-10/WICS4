@@ -9,39 +9,59 @@ import time
 
 
 def progress_UplSprSht(reqid):
+## initially set up to run continuously until the statecode is "done"
+## changed to run one and return - the frontend will have to reconnect if it wants updates after that
 
     def generate():
-        last_version = 0
+        # continuous-run version (keeps yielding updates until statecode is "done")
+        # last_version = 0
 
-        while True:
-            # session = HueySession()
+        # while True:
+        #     # session = HueySession()
 
-            row = async_comm.get_async_comm_state(reqid)    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to None if we can't get the record
+        #     row = async_comm.get_async_comm_state(reqid)    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to None if we can't get the record
 
-            if row and row.version > last_version:
+        #     if row and row.version > last_version:
 
-                payload = json.dumps({
-                    "statecode": row.statecode,
-                    "statetext": row.statetext
-                })  #should I dump the whole record here instead of just statecode and statetext?  Maybe not a good idea if there are big text fields or something, but it would be more flexible for the frontend if it had access to all the fields without me having to predict which ones it might want.  For now, I'll just include statecode and statetext since those are the ones I know the frontend will need, and I can always add more later if needed.
+        #         payload = json.dumps({
+        #             "statecode": row.statecode,
+        #             "statetext": row.statetext
+        #         })  #should I dump the whole record here instead of just statecode and statetext?  Maybe not a good idea if there are big text fields or something, but it would be more flexible for the frontend if it had access to all the fields without me having to predict which ones it might want.  For now, I'll just include statecode and statetext since those are the ones I know the frontend will need, and I can always add more later if needed.
 
-                yield f"data: {payload}\n\n"
+        #         yield f"data: {payload}\n\n"
 
-                last_version = row.version
+        #         last_version = row.version
 
-                if row.statecode == "done":
-                    break
+        #         if row.statecode == "done":
+        #             break
 
-            # session.close()
+        #     # session.close()
 
-            yield ": keepalive\n\n"
+        #     yield ": keepalive\n\n"
 
-            time.sleep(1)
-        # endwhile (until we break on statecode == "done")
+        #     time.sleep(1)
+        # # endwhile (until we break on statecode == "done")
+        # session = HueySession()
+
+        row = async_comm.get_async_comm_state(reqid)    # if the record has been deleted (e.g. by cleanup after failure), this will throw an exception, so default to None if we can't get the record
+
+        if row:
+            payload = json.dumps({
+                "statecode": row.statecode,
+                "statetext": row.statetext
+            })  #should I dump the whole record here instead of just statecode and statetext?  Maybe not a good idea if there are big text fields or something, but it would be more flexible for the frontend if it had access to all the fields without me having to predict which ones it might want.  For now, I'll just include statecode and statetext since those are the ones I know the frontend will need, and I can always add more later if needed.
+
+            return f"data: {payload}\n\n"
+        # endif row
+
+        # session.close()
+
+        return ": keepalive\n\n"
     # generate
 
-    r = Response(stream_with_context(generate()),
-                 mimetype="text/event-stream")
+    # r = Response(stream_with_context(generate()),
+    #              mimetype="text/event-stream")
+    r = Response(generate(), mimetype="text/event-stream")
 
     r.headers["X-Accel-Buffering"] = "no"
 
