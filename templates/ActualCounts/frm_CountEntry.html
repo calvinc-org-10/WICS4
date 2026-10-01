@@ -425,7 +425,7 @@
     function loadCountEntryRec(goDir) {
         const countEntryBaseUrl = "{{ url_for('WICS.CountEntryFormGo_Command', recNum=0, gotoCommand='GOCMD') }}";
         const R = getCurrentRecNum();
-        const newRec = countEntryBaseUrl.replace('/0/',`/${R}`).replace('GOCMD',`${goDir}`);
+        const newRec = countEntryBaseUrl.replace('/0/',`/${R}/`).replace('GOCMD',`${goDir}`);
         window.location = newRec;
     };
 
