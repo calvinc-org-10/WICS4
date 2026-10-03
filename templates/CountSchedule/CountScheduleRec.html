@@ -1,0 +1,425 @@
+{% extends "cToolsFormLayout.html" %}
+
+{% block tTitle %}Count Entry{% endblock %}
+{% block formName %}Count Entry{% endblock %}
+{% block statusMsgs %}
+    {% if changed_data.main|count > 0 %}
+        <div class="alert alert-success p-0 alert-dismissible fade show">
+            <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
+            Count record { { put record number here } } successfully saved.
+            <span class="d-none d-md-inline">
+            ChData: {{ changed_data.main }}
+            </span>
+        </div>
+    {% endif %}
+    {% if changed_data.matl|count > 0 %}
+        <div class="alert alert-success p-0 alert-dismissible fade show">
+            <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
+            Material changes for this record successfully saved.
+            <span class="d-none d-md-inline">
+            ChData: {{ changed_data.matl }}
+            </span>
+        </div>
+    {% endif %}
+{% endblock %}
+    <hr>
+
+{% block layoutFormFixedTop %}
+    <span class="col-5 bg-secondary text-warning">Count Date, Material are required before Saving the form</span>
+{% endblock layoutFormFixedTop %}
+{% block formBody %}
+    <form id="CSchForm" class="trackformchanges" method="post">
+        {{ frmMain.hidden_tag() }}
+        {{ frmMain.id(type='hidden') }}
+         <!-- form header -->
+        {% if frmMain.errors %}{{ frmMain.errors }}{% endif %}
+        {{ frmMain.id.data }}
+        <!-- main part of form -->
+        <!-- put initial focus on Material and/or init CountDate to today(local), skip CycCtID -->
+        <!-- div class="container-fluid m-1" -->
+        <div class="container m-1">
+            <div class="row g-0">
+            <div class="col-3">
+                Count Dt: {{ frmMain.CountDate(type="date", class="border border-5 border-danger fw-bold", style="width:10em;", autofocus=True, onchange="loadExtraInfo();", required=True) }}
+            </div>
+            {# <div class="col-1">{{ frmMain.CycCtID(hidden=True) }}</div> #}
+            <div class="col-4">Material:
+                <input list="Material-list"
+                    id="Material-input-visible" name="Material-input-visible"
+                    class="border border-5 border-danger fw-bold"
+                    onfocus="this.select();"
+                    onchange="loadExtraInfo();"
+                    value="{{matlchoiceForm.gotoItem}}"
+                    required
+                    style="width:12em;">
+                </input>
+                <span class="bi-caret-down-square"
+                    style="position:relative;top:+0px;font-size:20px;left:-30px;"
+                    tabindex = "-1"
+                    onclick="document.getElementById('Material-input-visible').focus();">
+                </span>
+                <datalist id="Material-list">
+                    {% for itm in matlchoiceForm.choicelist %}
+                        <option value="{{itm.Material_org}}">
+                    {% endfor %}
+                </datalist>
+            </div>
+            {{ frmMain.Material_id }}   
+            <div class="col-3">Counter: {{ frmMain.Counter(class="need-Matl-Dt border border-5 border-danger fw-bold", size="12") }}</div>
+
+        <div class="row g-0">
+            <div class="col-3">Priority: {{ frmMain.Priority(class="need-Matl-Dt", size="10") }}</div>
+            <div class="col-6">Reason Scheduled: {{ frmMain.ReasonScheduled(class="need-Matl-Dt", size="35") }}</div>
+        </div>
+
+        </div>
+        <div class="row g-0">
+            <div class="col-8">Schedule Notes: {{ frmMain.Notes(class="need-Matl-Dt", size="45") }}</div>
+        </div>
+        <div class="row g-0">
+            <div class="col-3">Requestor: {{ frmMain.Requestor(class="need-Matl-Dt", size="12") }}</div>
+            <div class="col-3">Request Filled: {{ frmMain.RequestFilled(class="need-Matl-Dt") }}</div>
+            <div class="col-2">
+            <button id="save_btn" type="button" form="CSchForm" class="need-Matl-Dt" onclick="SubmMainFm();" >
+                <img src="{{  url_for('static', filename='poem-poetry-icon.svg') }}" width="20" height="20"></img>
+                Save changes
+            </button>
+            </div>
+        </div>
+
+
+        <hr>
+        <div class="row g-0">
+            Material Info
+        </div>
+
+        <div class="row g-0">
+            {{ frmMatlInfo.hidden_tag() }}
+            {# {{ frmMatlInfo.Material(type="hidden") }} #}
+            <span>{{ frmMatlInfo.id.data | default('---', True) }}</span>
+            {# <div class="col-4">Desc: {{ frmMatlInfo.Description(size="40", disabled=True) }}</div> #}
+            <div class="col-4">Desc: {{ frmMatlInfo.Description(size="40") }}</div>
+            <div class="col-2">Pt Type: {{ frmMatlInfo.PartType_id.data }} {{ frmMatlInfo.PartType_id(class="need-Matl-Dt", style="width:7em") }}</div>
+            <div class="col-5">
+                Typical Container Qty: {{ frmMatlInfo.TypicalContainerQty(class="need-Matl-Dt", style="width:7em") }}
+                Typical Plt Qty: {{ frmMatlInfo.TypicalPalletQty(class="need-Matl-Dt", style="width:7em") }}
+            </div>
+        </div>
+        <div class=row g-0>
+            <div class="col-12">Material Notes: {{ frmMatlInfo.Notes(size="100", class="need-Matl-Dt", tabindex="-1") }}</div>
+        </div>
+        </div>  <!-- container-fluid, on same level with rows -->
+    </form>
+{% endblock formBody %}
+
+{% block layoutButtons %}
+    <!-- form footer -->
+    <hr>
+    <div class="container">
+        <div class="row mx-auto max-width=100%">
+            <div class="col-2">
+                <!--
+                <button id="save_btn" type="button" form="CSchForm" class="need-Matl-Dt" onclick="SubmMainFm();" >
+                    <img src="{{ url_for('static', filename='poem-poetry-icon.svg') }}" width="20" height="20"></img>
+                    Save changes
+                </button>
+                -->
+            </div>
+            <div class="col-8">
+                <button id="btn_firstrec" type="button" onclick="processGoToReq('First');">First</button>
+                <button id="btn_prevrec"  type="button" onclick="processGoToReq('Prev');" >Prev</button>
+                <button id="btn_nextrec"  type="button" onclick="processGoToReq('Next');" >Next</button>
+                <button id="btn_lastrec"  type="button" onclick="processGoToReq('Last');" >Last</button>
+                <button id="btn_newrec"   type="button" onclick="processGoToReq('New');"  >New</button>
+            </div>
+            <div class="col-2">
+                <button id="close_btn" type="button">
+                    <img src="{{ url_for('static', filename='stop-road-sign-icon.svg') }}" width="20" height="20"></img>
+                    Close Form
+                </button>
+            </div>
+        </div>
+    </div>
+{% endblock layoutButtons %}
+
+{% block postFormHTML %}
+<dialog id="modalGeneric" class="p-4 border-0 rounded shadow">
+  <h3 id="modalTitle"></h3>
+  <!-- Target this specifically for the body text -->
+  <div id="modalBody" class="my-3"></div> 
+  <div id="modalButtonsContainer" class="d-flex justify-content-end gap-2">
+    <!-- Buttons will be dynamically inserted here by the function -->
+  </div>
+</dialog>
+{% endblock postFormHTML %}
+
+
+{% block postFormScripts %}
+<script>
+    // var $form = $('.trackformchanges');
+    var forms = document.getElementById("CSchForm").querySelectorAll(":scope input");
+    const ctdtID = document.getElementById("{{frmMain.CountDate.id}}");
+    const orig_ctdt = ctdtID.value;
+    const submittedMaterialId = document.getElementById("{{ frmMain.Material_id.id }}");
+    const mtlnmID = document.getElementById("Material-input-visible");
+    const orig_matl = mtlnmID.value;
+    const mtlnmbrID = document.getElementById("{{frmMain.Material_id.id}}");
+    const orig_matl_id = mtlnmbrID.value;
+    let initialState;
+    // set up MatlMap for verifying if an entered Material # is valid
+    var MatlMap = new Map(
+    [
+    {% for itm in matlchoiceForm.choicelist %}
+        ['{{itm.Material_org}}', {{itm.id}}],
+    {% endfor %}
+    ]    )
+
+
+    // move to common
+    function serialize(elmnts) {
+        let retStr = ''
+        // let obj = {};
+        for (let theelmnt of elmnts) {
+            retStr += theelmnt.name + "='" + theelmnt.value + "';"
+        }
+        return retStr;
+    }
+
+
+    // JAVASCRIPT DATES SUCK!!!!!!
+    // expand this one day - this could be useful - Fix it first!!!
+    function dtstr(dt = Date(), fmt = "YYYY-MM-DD HH:NN:SS")
+    {
+        dt = (dt == undefined) ? Date() : dt;   // how do I move dt to localtime??? - easy - by not introducing syntax errors!
+        if (typeof(dt) == 'string') { dt = new Date(dt) }
+        d_str = fmt
+        d_str = d_str.replaceAll('YYYY',("0000"+dt.getFullYear()).slice(-4))
+        d_str = d_str.replaceAll('MM',("00"+(dt.getMonth()+1)).slice(-2))
+        d_str = d_str.replaceAll('DD',("00"+dt.getDate()).slice(-2))
+        d_str = d_str.replaceAll('HH',("00"+dt.getHours()).slice(-2))
+        d_str = d_str.replaceAll('NN',("00"+dt.getMinutes()).slice(-2))
+        d_str = d_str.replaceAll('SS',("00"+dt.getSeconds()).slice(-2))
+        // if new_dt = Date(d_str) is invalid, replace with dt.toString()
+        return d_str
+    }
+
+    document.body.onload = function() {
+
+        // turn off controls that need the Date and Material first
+        const vald_dt_matl = !isValid_Date_Material()
+        document.querySelectorAll(".need-Matl-Dt").forEach(element => {
+            element.disabled = !isValid_Date_Material();
+        });
+
+        sCE();  // show calculated value of CTD_QTY
+
+        initialState = serialize(forms);
+
+        }
+
+    document.body.onbeforeunload = function() {
+        document.getElementById("wait_spinner").style.display = "block";
+        }
+
+    // later, duplicate this for closeform (see document.body.onbeforeunload)
+    document.getElementById("close_btn").addEventListener("click",
+        function(evobj){
+            confirmLeave(YesCloseIt);
+        });
+
+    function processGoToReq(goDir) {
+        confirmLeave(()=>loadCountEntryRec(goDir));
+    };
+
+    function getCurrentRecNum() {
+        const recNum = Number.parseInt(document.getElementById('{{frmMain.id.id}}').value, 10);
+        return Number.isNaN(recNum) ? 0 : recNum;
+    }
+
+    function isValid_Date_Material() {
+        return isValid_Date() && isValid_Material();
+    }
+    function isValid_Date() {
+        let dVal;
+
+        if (ctdtID.value.trim()=="") {
+            return false;
+        }
+
+        try {
+            dVal = new Date(ctdtID.value)
+        }
+        catch {
+            return false;
+        }
+        return true;
+    }
+    function isValid_Material() {
+        if (mtlnmID.value.trim()=="") {
+                return false;
+        } else {
+            return MatlMap.has(mtlnmID.value);
+        }
+
+    }
+
+    function syncMaterialKey() {
+        if (!isValid_Material()) {
+            submittedMaterialId.value = "";
+            return false;
+        }
+        submittedMaterialId.value = MatlMap.get(mtlnmID.value);
+        return true;
+    }
+
+    function loadExtraInfo() {
+        if (!isValid_Date()) {
+            alertBox("Invalid Date", ctdtID.value + " is not a valid date");
+            ctdtID.focus();
+            return;
+        }
+
+        const countDate = (new Date(ctdtID.value)).toISOString().substring(0, 10);
+        ctdtID.value = countDate;
+
+        if (!syncMaterialKey()) {
+            if (mtlnmID.value != "") {
+                alertBox("Invalid Material", mtlnmID.value + " is not a valid Material number");
+            }
+            mtlnmID.focus();
+            return;
+        }
+
+        const countEntryBaseUrl = "{{ url_for('WICS.CountScheduleForm_ChgKey', recNum=0, reqDate='RDATE', MatlNum='MATLNUM') }}";
+        const newloc = countEntryBaseUrl.replace('/0/',`/${getCurrentRecNum()}/`).replace('RDATE',`${countDate}`).replace('MATLNUM',`${submittedMaterialId.value}`);
+        window.location = newloc;
+
+    };
+    function loadCountEntryRec(goDir) {
+        const countEntryBaseUrl = "{{ url_for('WICS.CountScheduleFormGo_Command', recNum=0, gotoCommand='GOCMD') }}";
+        const R = getCurrentRecNum();
+        const newRec = countEntryBaseUrl.replace('/0/',`/${R}/`).replace('GOCMD',`${goDir}`);
+        window.location = newRec;
+    };
+
+    function SubmMainFm() {
+
+        if (!syncMaterialKey()) {
+            alertBox("Invalid Material", "Please select a Material from the list.");
+            mtlnmID.focus();
+            return;
+        }
+
+        let formGood = true;
+
+        const countDate = document.getElementById("{{ frmMain.CountDate.id }}");
+        const material = document.getElementById("Material-input-visible");
+        const counter = document.getElementById("{{ frmMain.Counter.id }}");
+        const form = document.getElementById("CSchForm");
+
+        if (!countDate.value) {
+            formGood = false;
+            alertBox("Enter Count Date", "Please enter a Count Date");
+            countDate.focus();
+
+        } else if (!material.value) {
+            formGood = false;
+            alertBox("Enter Material", "Please enter a Material #");
+            material.focus();
+
+        }
+
+        if (formGood) {
+            form.submit();
+        }
+    }
+//******************
+
+// Get DOM references for dialog box
+const modal = document.getElementById("modalGeneric");
+const modalTitle = document.getElementById("modalTitle");
+const modalBody = document.getElementById("modalBody");
+const modalButtonsContainer = document.getElementById("modalButtonsContainer");
+
+function alertBox(titl, msg) {
+    // Set the title and message content
+    modalTitle.textContent = titl;
+    modalBody.innerHTML = msg;
+
+    // 3. Clear existing dynamic buttons and build new ones
+    modalButtonsContainer.innerHTML = "";
+
+    // Build "OK" Button
+    const OKBtn = document.createElement("button");
+    OKBtn.textContent = "OK";
+    OKBtn.addEventListener("click", () => {
+      modal.close(); // Native close method
+    });
+
+    // Append new buttons to container
+    modalButtonsContainer.appendChild(OKBtn);
+
+    // Open the modal natively as a modal backdrop overlay
+    modal.showModal(); 
+}
+
+    function isFormChanged() {
+        currState = serialize(forms);
+        return !(initialState === currState);
+    };
+
+function confirmLeave(LeaveProc) {
+  if (isFormChanged()) {
+    // 1. Set the Title
+    modalTitle.textContent = "Leave Record?";
+
+    // 2. Set the Body content safely
+    modalBody.innerHTML = "This record has changed<br>Do you really want to leave without saving?";
+
+    // 3. Clear existing dynamic buttons and build new ones
+    modalButtonsContainer.innerHTML = "";
+
+    // Build "Yes" Button
+    const yesBtn = document.createElement("button");
+    yesBtn.textContent = "Yes";
+    yesBtn.addEventListener("click", () => {
+      LeaveProc();
+      modal.close(); // Native close method
+    });
+
+    // Build "No" Button
+    const noBtn = document.createElement("button");
+    noBtn.textContent = "No";
+    noBtn.addEventListener("click", () => {
+      modal.close(); // Native close method
+    });
+
+    // Append new buttons to container
+    modalButtonsContainer.appendChild(yesBtn);
+    modalButtonsContainer.appendChild(noBtn);
+
+    // 4. Open the native modal
+    // This replaces .dialog("open") and handles the background overlay automatically
+    modal.showModal(); 
+
+  } else {
+    LeaveProc();
+  }
+}
+
+// Disables closing the modal when pressing the Escape key (mimics closeOnEscape: false)
+modal.addEventListener("cancel", (event) => {
+  event.preventDefault();
+});
+
+
+    function YesCloseIt() {
+        window.close()
+    }
+
+    function DoNothing() {
+        // what do you _think_ this does??
+    }
+
+</script>
+{% endblock postFormScripts %}

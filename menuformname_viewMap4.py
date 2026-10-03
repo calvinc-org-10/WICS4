@@ -33,7 +33,7 @@ FormNameToURL_Map['frmmaterial'.lower()] = ('WICS.MaterialForm', None)   # make 
 FormNameToURL_Map['matllistupdt'.lower()] = ('UpdateMatlListfromSAP', views.Material.updtMatlList.fnUpdateMatlListfromSAP_init)
 # FormNameToURL_Map['frmRandCountScheduler'.lower()] = (None, None)
 
-# FormNameToURL_Map['frmCountScheduleEntry'.lower()] = ('CountScheduleForm', forms.CountScheduleRecordForm)
+FormNameToURL_Map['frmCountScheduleEntry'.lower()] = ('WICS.CountScheduleForm', None)
 # FormNameToURL_Map['frmRequestCountScheduleEntry'.lower()] = ('RequestCountScheduleForm', None)
 # FormNameToURL_Map['frmRequestedCountListEdit'.lower()] = ('RequestCountListEdit', None)
 # FormNameToURL_Map['frmUploadCountSched'.lower()] = ('UploadCountSchedSprsht', None)

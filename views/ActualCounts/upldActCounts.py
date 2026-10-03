@@ -40,7 +40,7 @@ from models import (
 class FatalUploadError(Exception):
     pass
 
-def cleanupfld(fld, val, CountSprshtDateEpoch = WINDOWS_EPOCH):
+def cleanupfld(fld, val, CountSprshtDateEpoch: Any = WINDOWS_EPOCH):
     """
     fld is the name of the field in the ActualCount or MaterialList table
     val is the value to be cleaned for insertion into the fld
@@ -56,7 +56,7 @@ def cleanupfld(fld, val, CountSprshtDateEpoch = WINDOWS_EPOCH):
             cleanval = val
         elif isinstance(val,int):
             usefld = True
-            cleanval = from_excel(val,CountSprshtDateEpoch)
+            cleanval = from_excel(val, epoch=CountSprshtDateEpoch)
         else:
             usefld = True
             cleanval = coerce_date(val)

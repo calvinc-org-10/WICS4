@@ -1,9 +1,8 @@
 from flask_wtf import FlaskForm
 import wtforms as forms
-from wtforms.validators import DataRequired, Disabled, Optional
+from wtforms.validators import DataRequired, Optional
 
-from models import ActualCounts, MaterialList, WhsePartTypes, CountSchedule, choices_for_whseparttypes
-from database import Repository, app_db
+from models import ActualCounts, WhsePartTypes
 
 
 class CountEntryForm(FlaskForm):
@@ -26,36 +25,4 @@ class CountEntryForm(FlaskForm):
 
     class Meta(FlaskForm.Meta):
         model = ActualCounts
-
-
-class RelatedMaterialInfo(FlaskForm):
-    id = forms.HiddenField(validators=[Optional()])
-    Material = forms.HiddenField(validators=[Optional()])
-    Description = forms.StringField(validators=[Optional()], render_kw={"disabled": True})
-    # PartType_id = forms.HiddenField()
-    PartType_id = forms.SelectField(choices=[])
-    #                             app_db.session.query(WhsePartTypes).order_by(WhsePartTypes.WhsePartType).all())
-    TypicalContainerQty = forms.StringField()
-    TypicalPalletQty = forms.StringField()
-    Notes = forms.StringField()
-    
-    class Meta(FlaskForm.Meta):
-        model = MaterialList
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Load choices at runtime (request/app context), not at module import.
-        self.PartType_id.choices = choices_for_whseparttypes()  # type: ignore[assignment]
-
-
-class RelatedScheduleInfo(FlaskForm):
-    id = forms.IntegerField(validators=[Disabled()])
-    CountDate = forms.DateField(validators=[Disabled()])
-    Counter = forms.StringField(validators=[Disabled()])
-    Priority = forms.StringField(validators=[Disabled()])
-    ReasonScheduled = forms.StringField(validators=[Disabled()])
-    Notes = forms.StringField(validators=[Disabled()])
-    
-    class Meta(FlaskForm.Meta):
-        model = CountSchedule
 

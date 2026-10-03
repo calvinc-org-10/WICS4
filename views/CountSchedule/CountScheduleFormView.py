@@ -1,12 +1,11 @@
-from typing import Dict, Any, List
-from datetime import datetime, date
 
 from flask_login import login_required, current_user
 from flask import (
-    redirect, url_for, abort,
+    # redirect, url_for, 
+    abort,
     flash,
-    request, session,
-    current_app,
+    # request, session,
+    # current_app,
     )
 
 from calvincTools.utils import (
@@ -14,19 +13,19 @@ from calvincTools.utils import (
     coerce_date,
     )
 
-from forms.ActualCounts.CountEntryForm import CountEntryForm
-from forms.CountSchedule.RelatedScheduleInfoForm import RelatedScheduleInfo
+from forms.CountSchedule.CountScheduleRecordForm import CountScheduleRecordForm
 from forms.Material.RelatedMaterialInfoForm import RelatedMaterialInfo
-from models import ActualCounts, MaterialList, WhsePartTypes
+# from WICS.procs_misc import HolidayList
+# from WICS.procs_CountSchedule import fnCountScheduleRecordExists
 
+from models import MaterialList
 from database import app_db
 
 
-@login_required
-def fnCountEntryView(
-        recNum = None, MatlNum = None, reqDate = None,
-        gotoCommand = None
-        ):
+def _fnCountSchedRecViewCommon(variation,
+            recNum = 0, MatlNum = 0, reqDate = None,
+            gotoCommand = None, **kwargs
+            ):
 
     # flags indicating whether key parameters were given
     MatlNumPassed = MatlNum is not None
@@ -36,13 +35,16 @@ def fnCountEntryView(
     # defauls parms
     if not recNumPassed: recNum = 0
     reqDate = coerce_date(reqDate)
+    #// review this logic for handling default non-workdays
+    # skipdates = HolidayList(req)
+    # reqDate = calvindate().nextWorkdayAfter(extraNonWorkdayList=skipdates)
 
     # the string 'None' is not the same as the value None
     if MatlNum=='None' or not MatlNumPassed: MatlNum=0
     if gotoCommand=='None': gotoCommand=None
 
-    FormMain = CountEntryForm
-    FormSubs = {'matl': RelatedMaterialInfo, 'schedule': RelatedScheduleInfo}
+    FormMain = CountScheduleRecordForm
+    FormSubs = {'matl': RelatedMaterialInfo}
 
     modelMain = FormMain.Meta.model
     modelSubs = {key:S.Meta.model for key, S in FormSubs.items()}
@@ -50,32 +52,31 @@ def fnCountEntryView(
     prefixvals = {
         'main': 'counts',
         'matl': 'matl',
-        'schedule': 'schedule',
     }
     initialvals = {
-        'main': {'CountDate': reqDate,'Counter':current_user.username},
+        'main': {'CountDate': reqDate, 'RequestFilled': None},
         'matl': {},
-        'schedule': {'CountDate': reqDate},
     }
+    initialvals['main']['Requestor'] = current_user.get_short_name() if variation == 'REQ' else None
+    
     initialobj = {
         'main': modelMain(**initialvals['main']),
         'matl': modelSubs['matl'](**initialvals['matl']),
-        'schedule': modelSubs['schedule'](**initialvals['schedule']),
     }
 
-    # process main form
+    # process forms
     mainFm = FormMain(prefix=prefixvals['main'], obj=initialobj['main'])   # Note that you don't have to pass request.form to Flask-WTF; it will load automatically. And the convenient validate_on_submit will check if it is a POST request and if it is valid.
     matlSubFm = FormSubs['matl'](prefix=prefixvals['matl'], obj=initialobj['matl'])
-    schedSet = FormSubs['schedule'](prefix=prefixvals['schedule'], obj=initialobj['schedule'])
 
     chgd_dat = {
-        'main': [],
-        'matl': [],
-        'schedule': []
+        'main': [], 
+        'matl': [], 
         }
 
-    # if request.method == 'POST' and mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
-    if mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
+    msgDupSched = ''
+
+    # if req.method == 'POST':
+    if mainFm.validate_on_submit() and matlSubFm.validate_on_submit():
         postedRecNum = int(mainFm.id.data or 0)
         if postedRecNum > 0:
             currRec = app_db.session.get(modelMain, postedRecNum)
@@ -91,16 +92,19 @@ def fnCountEntryView(
         matlRec = app_db.session.get(modelSubs['matl'], matlRecNum) if matlRecNum > 0 else None
         if matlRec is None:
             flash('Select a valid Material.', 'error')
+            cntext = {
+                    'variation': variation,
+                    'frmMain': mainFm,
+                    'newRecord_flag': postedRecNum == 0,
+                    'frmMatlInfo': matlSubFm,
+                    'matlchoiceForm': {'gotoItem': '', 'choicelist': []},
+                    'noSchedInfo':True,
+                    'changed_data': chgd_dat,
+                    }
+            templt = 'CountSchedule/CountScheduleRec.html'
+
             return checkTemplate_and_render(
-                'ActualCounts/frm_CountEntry.html',
-                frmMain=mainFm,
-                newRecord_flag=(postedRecNum == 0),
-                frmMatlInfo=matlSubFm,
-                todayscounts=None,
-                matlchoiceForm={'gotoItem': '', 'choicelist': []},
-                noSchedInfo=True,
-                frmSchedInfo=schedSet,
-                changed_data=chgd_dat,
+                templt, **cntext
             )
 
         before_main = {
@@ -108,10 +112,14 @@ def fnCountEntryView(
             for field in mainFm
             if field.short_name != 'csrf_token' and hasattr(currRec, field.short_name)
         }
+
         mainFm.populate_obj(currRec)
         if postedRecNum and postedRecNum != currRec.id:
             currRec.id = postedRecNum
         currRec.Material_id = matlRecNum
+        if variation=='REQ' or 'Requestor' in mainFm.data:
+            currRec.Requestor = currRec.Requestor or current_user.get_short_name()
+            currRec.Requestor_userid_id = current_user.id
 
         chgd_dat['main'] = [
             f'{field}={getattr(currRec, field)}'
@@ -137,7 +145,7 @@ def fnCountEntryView(
         currRec = initialobj['main']
         matlRec = initialobj['matl']
 
-    else:   ## rec.method != 'POST'
+    else:   # rec.method != 'POST'
 
         # TODO: add protection against no records
         recFirstPK = getattr(modelMain.query.order_by(modelMain.id).first(), 'id', 0)
@@ -196,9 +204,10 @@ def fnCountEntryView(
         matlRecNum = int(getattr(currRec, 'Material_id', 0) or 0)
         matlRec = app_db.session.get(model_class, matlRecNum) or initialobj['matl']
 
-    #endif rec.method == 'POST'
+    #endif rec.method = 'POST'
 
     # at this point, currRec and matlRec s/b correct
+
     # prep the forms for display, using the current records (or initial values if no record exists)
     if currRec:
         mainFm = FormMain(formdata=None, obj=currRec, prefix=prefixvals['main'])
@@ -211,30 +220,6 @@ def fnCountEntryView(
         matlSubFm = FormSubs['matl'](formdata=None, obj=initialvals['matl'], prefix=prefixvals['matl'])
         matlRecNum = 0
 
-    # all counts for this Material today
-    if matlRec:
-        matchDate = reqDate
-        if currRec.id is not None: matchDate = currRec.CountDate
-        todayscounts = modelMain.query.filter(modelMain.CountDate==matchDate,modelMain.Material_id==matlRecNum).all()
-    else:
-        # todayscounts = modelMain()
-        todayscounts = None
-    # endif matlRec
-
-    # schedule info for this material and date
-    schedinfo = None
-    if currRec and matlRec:
-        getDate = currRec.CountDate
-        schedinfo = modelSubs['schedule'].query.filter(modelSubs['schedule'].CountDate==getDate, modelSubs['schedule'].Material_id==matlRec.id).first()
-    else:
-        schedinfo = None
-    # endif currRec and matlRec
-    if not schedinfo:
-        schedFm = FormSubs['schedule'](formdata=None, obj=initialvals['schedule'], prefix=prefixvals['schedule'])
-    else:
-        schedFm = FormSubs['schedule'](formdata=None, obj=schedinfo, prefix=prefixvals['schedule'])
-    # endif schedinfo
-
     # CountEntryForm MaterialList dropdown
     matlchoiceForm = {}
     if matlRecNum:     # this implies matlRec exists and is a real record, so we can use it to populate the dropdown
@@ -246,15 +231,40 @@ def fnCountEntryView(
         matlchoiceForm['gotoItem'] = ''
     matlchoiceForm['choicelist'] = [{'id': rec.id, 'Material_org': f'{rec.Material}:{rec.org.orgname}'} for rec in  MaterialList.query.all()]
 
+#// wics3 code
     # display the form
-    cntext = {'frmMain': mainFm,
-            'newRecord_flag': (currRec.id is None or currRec.id==0),
+    cntext = {
+            'variation': variation,
+            'frmMain': mainFm,
+            'newRecord_flag': currRec is None or currRec.id == 0,
             'frmMatlInfo': matlSubFm,
-            'todayscounts': todayscounts,
             'matlchoiceForm':matlchoiceForm,
-            'noSchedInfo':(not schedinfo),
-            'frmSchedInfo': schedFm,
             'changed_data': chgd_dat,
             }
-    templt = 'ActualCounts/frm_CountEntry.html'
-    return checkTemplate_and_render(templt, **cntext)
+    templt = 'CountSchedule/CountScheduleRec.html'
+
+    return checkTemplate_and_render(
+        templt, **cntext
+    )
+
+@login_required
+def fnRequestCountScheduleRecView(
+            recNum = 0, MatlNum = 0, reqDate = None,
+            gotoCommand = None
+            ):
+    return _fnCountSchedRecViewCommon('REQ',
+            recNum, MatlNum, reqDate,
+            gotoCommand
+            )
+
+@login_required
+def fnCountScheduleRecView(
+            recNum = 0, MatlNum = 0, reqDate = None,
+            gotoCommand = None
+            ):
+
+    return _fnCountSchedRecViewCommon(None,
+            recNum, MatlNum, reqDate,
+            gotoCommand
+            )
+

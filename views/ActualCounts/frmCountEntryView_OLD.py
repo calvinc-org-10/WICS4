@@ -14,7 +14,9 @@ from calvincTools.utils import (
     coerce_date,
     )
 
-from forms.ActualCounts.CountEntryForm import CountEntryForm, RelatedMaterialInfo, RelatedScheduleInfo
+from forms.ActualCounts.CountEntryForm import CountEntryForm
+from forms.CountSchedule.RelatedScheduleInfoForm import RelatedScheduleInfo
+from forms.Material.RelatedMaterialInfoForm import RelatedMaterialInfo
 from models import ActualCounts, MaterialList, WhsePartTypes
 
 from database import app_db

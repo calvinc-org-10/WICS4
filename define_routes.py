@@ -149,6 +149,43 @@ def define_routes(flskapp):
         endpoint='CountSummaryReport-dt',
         )
 
+    ### CountScheduleForm routes
+    #########################
+    from views.CountSchedule.CountScheduleFormView import fnCountScheduleRecView
+    
+    # initial form load
+    WICS_bp.add_url_rule('/CountScheduleForm', 
+        view_func=fnCountScheduleRecView, 
+        methods=['GET', 'POST'], 
+        endpoint='CountScheduleForm'
+        )
+    # go to a specific record; recNum is record to go to
+    WICS_bp.add_url_rule('/CountScheduleForm/Go/<int:recNum>',
+        view_func=fnCountScheduleRecView,
+        methods=['GET','POST'],
+        endpoint='CountScheduleFormGo'
+        )
+    # go to a record via a command like Prev, Next, First, etc; recNum is record coming from
+    WICS_bp.add_url_rule('/CountScheduleForm/Go/<int:recNum>/<string:gotoCommand>',
+        view_func=fnCountScheduleRecView,
+        methods=['GET','POST'],
+        endpoint='CountScheduleFormGo_Command'
+        )
+    # change key for a specific record; recNum is record to change, reqDate is requested date, MatlNum is material number
+    WICS_bp.add_url_rule('/CountScheduleForm/<int:recNum>/<string:reqDate>/<string:MatlNum>',
+        view_func=fnCountScheduleRecView,
+        methods=['GET','POST'],
+        defaults={'gotoCommand':'ChgKey'},
+        endpoint='CountScheduleForm_ChgKey'
+        )
+
+    # from views.ActualCounts.upldActCounts import fnUploadActCountSprsht
+    # xWICS_bp.add_url_rule('/UploadActualCounts',
+    #     view_func=fnUploadActCountSprsht,      #type: ignore
+    #     methods=['GET', 'POST'], 
+    #     endpoint='UploadActualCounts'
+    #     )
+
     ### SAP Table routes
     #########################
     from views.SAP import procs_SAP
