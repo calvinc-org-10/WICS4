@@ -1,7 +1,7 @@
 {% extends "cToolsFormLayout.html" %}
 
-{% block tTitle %}Count Entry{% endblock %}
-{% block formName %}Count Entry{% endblock %}
+{% block tTitle %}Count Schedule{% endblock %}
+{% block formName %}Count Schedule{% endblock %}
 {% block statusMsgs %}
     {% if changed_data.main|count > 0 %}
         <div class="alert alert-success p-0 alert-dismissible fade show">
@@ -65,7 +65,7 @@
                 </datalist>
             </div>
             {{ frmMain.Material_id }}   
-            <div class="col-3">Counter: {{ frmMain.Counter(class="need-Matl-Dt border border-5 border-danger fw-bold", size="12") }}</div>
+            <div class="col-3">Counter: {{ frmMain.Counter(class="need-Matl-Dt", size="12") }}</div>
 
         <div class="row g-0">
             <div class="col-3">Priority: {{ frmMain.Priority(class="need-Matl-Dt", size="10") }}</div>
@@ -364,6 +364,8 @@ function alertBox(titl, msg) {
 }
 
     function isFormChanged() {
+        // FIX ME!!!
+        return false;
         currState = serialize(forms);
         return !(initialState === currState);
     };

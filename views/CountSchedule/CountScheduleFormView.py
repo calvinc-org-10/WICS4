@@ -10,7 +10,7 @@ from flask import (
 
 from calvincTools.utils import (
     checkTemplate_and_render,
-    coerce_date,
+    coerce_date, coerce_int,
     )
 
 from forms.CountSchedule.CountScheduleRecordForm import CountScheduleRecordForm
@@ -32,15 +32,16 @@ def _fnCountSchedRecViewCommon(variation,
     reqDatePassed = reqDate is not None
     recNumPassed = recNum is not None
     
-    # defauls parms
+    # massage parms
     if not recNumPassed: recNum = 0
+    recNum = coerce_int(recNum)
+    MatlNum = coerce_int(MatlNum)
     reqDate = coerce_date(reqDate)
     #// review this logic for handling default non-workdays
     # skipdates = HolidayList(req)
     # reqDate = calvindate().nextWorkdayAfter(extraNonWorkdayList=skipdates)
 
     # the string 'None' is not the same as the value None
-    if MatlNum=='None' or not MatlNumPassed: MatlNum=0
     if gotoCommand=='None': gotoCommand=None
 
     FormMain = CountScheduleRecordForm
@@ -188,8 +189,9 @@ def _fnCountSchedRecViewCommon(variation,
         savedRec = app_db.session.get(modelMain, recNum)
         if savedRec is None:
             currRec = initialobj['main']
-        elif ((reqDatePassed and reqDate != savedRec.CountDate)
-                or (MatlNumPassed and MatlNum != savedRec.Material_id)):
+        elif (((reqDatePassed and reqDate != savedRec.CountDate)
+                or (MatlNumPassed and MatlNum != savedRec.Material_id))
+             and gotoCommand == 'ChgKey'):
             # review this logic
             currRec = modelMain(
                 **{column.name: getattr(savedRec, column.name) for column in savedRec.__table__.columns}
@@ -198,7 +200,7 @@ def _fnCountSchedRecViewCommon(variation,
         else:
             currRec = savedRec
 
-        if MatlNumPassed and MatlNum != currRec.Material_id:
+        if MatlNumPassed and MatlNum != currRec.Material_id and gotoCommand == 'ChgKey':
             currRec.Material_id = MatlNum
         model_class = modelSubs['matl']
         matlRecNum = int(getattr(currRec, 'Material_id', 0) or 0)
