@@ -66,6 +66,13 @@ def define_routes(flskapp):
         endpoint='UploadActualCounts'
         )
 
+    from views.ActualCounts.frmActualCountListView import fnActualCountListView
+    WICS_bp.add_url_rule('/ActualCountList',
+        view_func=fnActualCountListView,
+        methods=['GET', 'POST'],
+        endpoint='ActualCountList'
+        )
+
     ### MaterialForm routes
     #########################
     from views.Material.frmMaterial import (

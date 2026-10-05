@@ -1,0 +1,134 @@
+{% extends "cToolsFormLayout.html" %}
+
+{% block tTitle %}Actual Counts{% endblock %}
+{% block formName %}Actual Count Records{% endblock %}
+
+{% block statusMsgs %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% set alert_class = 'success' if category == 'success' else 'danger' %}
+                <div class="alert alert-{{ alert_class }} p-1 alert-dismissible fade show">
+                    <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+{% endblock %}
+
+{% block formBody %}
+    <form id="countListActions" method="post">
+        {% if csrf_token is defined %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% endif %}
+        <input type="hidden" id="copyCountFromid" name="copyCountFromid" value="">
+        <input type="hidden" id="copyCountToDate" name="copyCountToDate" value="">
+        <input type="hidden" id="deleteCountid" name="deleteCountid" value="">
+    </form>
+
+    <table class="table table-striped table-sm align-middle">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Count Date | Counter | Material | LOCATION | Counted Quantity</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for itm in ActCtList %}
+                <tr>
+                    <td>{{ itm.id }}:</td>
+                    <td>
+                        {{ itm.CountDate }} |
+                        {{ itm.Counter }} |
+                        {{ itm.Material.Material }} |
+                        {{ itm.LOCATION }} |
+                        {% if not itm.LocationOnly %}
+                            {{ itm.CTD_QTY_Expr }} = {{ itm.CTD_QTY_Eval }}
+                        {% else %}
+                            <b>LOCATION ONLY</b>
+                        {% endif %}
+                        {% if itm.Notes %}
+                            <br>
+                            {{ itm.Notes }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button" onclick="editCount({{ itm.id }});">Edit</button>
+                        <button type="button" onclick="copyCount({{ itm.id }});">Copy Count</button>
+                        <button type="button" onclick="deleteCount({{ itm.id }});">Delete Count</button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+{% block layoutButtons %}
+    <hr>
+    <div class="container">
+        <div class="row mx-auto max-width=100%">
+            <div class="col-2">
+                <button id="add_btn" type="button">
+                    <img src="{{ url_for('static', filename='addition-color-outline-icon.svg') }}" width="20" height="20">
+                    Add New Count
+                </button>
+            </div>
+            <div class="col-3">
+                max Count Records shown: {{ max_listrecs }}
+            </div>
+            <div class="col-5"></div>
+            <div class="col-2">
+                <button id="close_btn" type="button" onclick="window.close();">
+                    <img src="{{ url_for('static', filename='stop-road-sign-icon.svg') }}" width="20" height="20">
+                    Close Form
+                </button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block postFormScripts %}
+<script>
+    function editCount(idToEdit) {
+        let targetUrl = "{{ url_for('WICS.CountEntryFormGo', recNum=0) }}";
+        targetUrl = targetUrl.replace("/0", "/" + String(idToEdit));
+        window.open(targetUrl, "_blank");
+    }
+
+    document.getElementById("add_btn").addEventListener("click", function() {
+        const targetUrl = "{{ url_for('WICS.CountEntryForm') }}";
+        window.open(targetUrl, "_blank");
+    });
+
+    function clearActionInputs() {
+        document.getElementById("copyCountFromid").value = "";
+        document.getElementById("copyCountToDate").value = "";
+        document.getElementById("deleteCountid").value = "";
+    }
+
+    function copyCount(idToCopy) {
+        const todayStr = (new Date()).toISOString().slice(0, 10);
+        const copyDate = window.prompt("Copy to what date? Use YYYY-MM-DD.", todayStr);
+        if (copyDate === null) {
+            return;
+        }
+
+        clearActionInputs();
+        document.getElementById("copyCountFromid").value = String(idToCopy);
+        document.getElementById("copyCountToDate").value = copyDate.trim();
+        document.getElementById("countListActions").requestSubmit();
+    }
+
+    function deleteCount(idToDelete) {
+        if (!window.confirm("Are you sure you want to delete count " + String(idToDelete) + "?")) {
+            return;
+        }
+
+        clearActionInputs();
+        document.getElementById("deleteCountid").value = String(idToDelete);
+        document.getElementById("countListActions").requestSubmit();
+    }
+</script>
+{% endblock %}
