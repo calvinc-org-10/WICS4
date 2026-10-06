@@ -44,7 +44,7 @@ FormNameToURL_Map['frmCountScheduleEntry'.lower()] = ('WICS.CountScheduleForm', 
 # FormNameToURL_Map['LocationList'.lower()] = ('LocationList', None)
 # FormNameToURL_Map['sap'.lower()] = (None, views.SAP.procs_SAP.fnShowSAP)
 FormNameToURL_Map['sap'.lower()] = ('WICS.showtable-SAP', None)
-# FormNameToURL_Map['tblActualCounts'.lower()] = ('ActualCountList', None)
+FormNameToURL_Map['tblActualCounts'.lower()] = ('WICS.ActualCountList', None)
 # FormNameToURL_Map['PartTypeFm'.lower()] = ('PartTypeForm', forms.PartTypesForm)
 
 

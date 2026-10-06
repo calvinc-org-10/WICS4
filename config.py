@@ -36,7 +36,7 @@ class Config:
     ACCURACY_DANGER = 90        #	1	In Count Summary, Count Accuracy less than this value is highlighted red
     ACCURACY_SUCCESS = 98.5     #	1	In Count Summary, Count Accuracy higher than this value is highlighted green
     ACCURACY_WARNING = 95	    #1	In Count Summary, Count Accuracy at least this value (but less than ACCURACY-SUCCESS) is highlighted yellow
-    COUNTLIST_RECLIMIT = 500
+    COUNTLIST_RECLIMIT = 2000
     LOCRPT_COUNTDAYS_IFNOSAP = 30
 
     DEFAULT_DATEFORMAT = '%Y-%m-%d'  # default date format for displaying dates in the app
