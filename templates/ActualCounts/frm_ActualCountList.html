@@ -27,11 +27,16 @@
         <input type="hidden" id="deleteCountid" name="deleteCountid" value="">
     </form>
 
-    <table class="table table-striped table-sm align-middle">
+    <table class="table table-striped table-sm align-middle" style="table-layout: fixed; width: 100%;">
+        <colgroup>
+            <col style="width: 8%;">
+            <col style="width: 75%;">
+            <col style="width: 17%;">
+        </colgroup>
         <thead>
             <tr>
                 <th></th>
-                <th>Count Date | Counter | Material | LOCATION | Counted Quantity</th>
+                <th style="word-break: break-word;">Count Date | Counter | Material | LOCATION | Counted Quantity</th>
                 <th></th>
             </tr>
         </thead>
@@ -39,7 +44,7 @@
             {% for itm in ActCtList %}
                 <tr>
                     <td>{{ itm.id }}:</td>
-                    <td>
+                    <td style="word-break: break-word;">
                         {{ itm.CountDate }} |
                         {{ itm.Counter }} |
                         {{ itm.Material.Material }} |
@@ -54,10 +59,10 @@
                             {{ itm.Notes }}
                         {% endif %}
                     </td>
-                    <td>
-                        <button type="button" onclick="editCount({{ itm.id }});">Edit</button>
-                        <button type="button" onclick="copyCount({{ itm.id }});">Copy Count</button>
-                        <button type="button" onclick="deleteCount({{ itm.id }});">Delete Count</button>
+                    <td class="text-center">
+                        <button type="button" class="btn-sm small" onclick="editCount({{ itm.id }});">Edit</button>
+                        <button type="button" class="btn-sm small" onclick="copyCount({{ itm.id }});">Copy Count</button>
+                        <button type="button" class="btn-sm small" onclick="deleteCount({{ itm.id }});">Delete Count</button>
                     </td>
                 </tr>
             {% endfor %}

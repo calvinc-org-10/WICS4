@@ -1,6 +1,7 @@
 from datetime import date
 
 from flask import (
+    current_app,
     abort,
     flash,
     redirect,
@@ -14,14 +15,14 @@ from sqlalchemy.orm import joinedload
 from calvincTools.mathexpr_parser import eval_arith
 from calvincTools.utils import checkTemplate_and_render
 from database import app_db
-from models import ActualCounts, MaterialList, WICS3_cParameters
+from models import ActualCounts, MaterialList
 
 
 _MAX_LISTRECS = 5000
 
 
 def _get_max_listrecs() -> int:
-    configured_limit = WICS3_cParameters.get_parameter('COUNTLIST-RECLIMIT', str(_MAX_LISTRECS))
+    configured_limit = str(current_app.config.get('COUNTLIST_RECLIMIT', _MAX_LISTRECS))
     if configured_limit.isnumeric():
         parsed_limit = int(configured_limit)
         if parsed_limit > 0:
@@ -121,8 +122,12 @@ def fnActualCountListView():
             qty_eval = eval_arith(record.CTD_QTY_Expr)
         setattr(record, 'CTD_QTY_Eval', qty_eval)
 
+    templt = 'ActualCounts/frm_ActualCountList.html'
+    cntext = {
+        'ActCtList': actual_count_list,
+        'max_listrecs': max_listrecs,
+    }
     return checkTemplate_and_render(
-        'ActualCounts/frm_ActualCountList.html',
-        ActCtList=actual_count_list,
-        max_listrecs=max_listrecs,
+        templt,
+        **cntext
     )
