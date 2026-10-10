@@ -240,11 +240,13 @@ def fnCountEntryView(
     if matlRecNum:     # this implies matlRec exists and is a real record, so we can use it to populate the dropdown
         assert matlRec is not None, "matlRec should not be None when MatlNum is provided"
         # matlchoiceForm['gotoItem'] = matlRec        # the template pulls Material from this record
-        matlchoiceForm['gotoItem'] = f'{matlRec.Material}:{matlRec.org.orgname}'
+        # matlchoiceForm['gotoItem'] = f'{matlRec.Material}:{matlRec.org.orgname}'
+        matlchoiceForm['gotoItem'] = matlRec.orgMaterialNum
     else:
         ## matlchoiceForm['gotoItem'] = {'Material':MatlNum}
         matlchoiceForm['gotoItem'] = ''
-    matlchoiceForm['choicelist'] = [{'id': rec.id, 'Material_org': f'{rec.Material}:{rec.org.orgname}'} for rec in  MaterialList.query.all()]
+    # matlchoiceForm['choicelist'] = [{'id': rec.id, 'Material_org': f'{rec.Material}:{rec.org.orgname}'} for rec in  MaterialList.query.all()]
+    matlchoiceForm['choicelist'] = [{'id': rec.id, 'Material_org': rec.orgMaterialNum} for rec in  MaterialList.query.all()]
 
     # display the form
     cntext = {'frmMain': mainFm,

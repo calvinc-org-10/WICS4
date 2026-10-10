@@ -236,6 +236,10 @@ class MaterialList(Base):
     sap_sohrecs: Mapped[list['SAP_SOHRecs']] = relationship('SAP_SOHRecs', back_populates='Material')
     tmpmateriallistupdate: Mapped[list['tmpMaterialListUpdate']] = relationship('tmpMaterialListUpdate', back_populates='MaterialLink')
 
+    @property
+    def orgMaterialNum(self) -> str|None:
+        return f"{self.org.orgname}:{self.Material}" if self.org and self.Material else None
+    
 class tmpMaterialListUpdate(Base):
     __tablename__ = 'WICS_tmpmateriallistupdate'
     __table_args__ = (
@@ -382,6 +386,14 @@ class ActualCounts(Base):
 
     Material: Mapped['MaterialList'] = relationship('MaterialList', back_populates='actualcounts')
 
+    @property
+    def CtdQtyEval(self) -> int|None:
+        if self.CTD_QTY_Expr:
+            try:
+                return int(eval(self.CTD_QTY_Expr))
+            except Exception:
+                return None
+        return None
 
 ##########  SAP
 

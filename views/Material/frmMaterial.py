@@ -337,7 +337,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
         }
 
     if flow_case == FlowCase.NEW_RECORD:
-        SAP_SOH = fnSAPList(matl='-')
+        SAP_SOH = fnSAPList(matl=-1)   # should return empty SAPList
     else:
         SAP_SOH = fnSAPList(matl=currRec)
     # strip out the SAP_SOH structure that is not needed for the template, to simplify and reduce the amount of data sent to the client.
@@ -349,10 +349,10 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
     currRec_org = currRec.org or app_db.session.get(Organizations, _defaultOrg)
     gotoForm = {
         'choicelist': [
-            SimpleNamespace(id=rec.id, Material_org=f'{rec.Material}:{rec.org.orgname}')
+            SimpleNamespace(id=rec.id, Material_org=rec.orgMaterialNum)
             for rec in app_db.session.query(MaterialList).all()
         ],
-        'gotoItem': f'{currRec.Material}:{currRec_org.orgname}' if currRec_org and currRec.id and currRec.Material else '',
+        'gotoItem': currRec.orgMaterialNum if currRec_org and currRec.id and currRec.Material else '',
     }
 
     SAP = aliased(SAP_SOHRecs)
@@ -398,7 +398,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
     for r in raw_countdata:
         if r.ActualCounts.CTD_QTY_Expr:
             try:
-                r.QtyEval = eval_arith(r.ActualCounts.CTD_QTY_Expr)
+                r.QtyEval = r.ActualCounts.CtdQtyEval
             except Exception:
                 r.QtyEval = 0
         else:

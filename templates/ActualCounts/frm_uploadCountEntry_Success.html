@@ -21,12 +21,12 @@
     ###}
             Sprsht row {{ res.rowNum }}, 
             {% if 'error' not in res.errState %}
-                {###
+                {##}
                 Count Record {{ res.id }}: {{ res.CountDate|date:'Y-m-d '}} | {{ res.MaterialNum }} |
                     {{ res.Counter }} | {{ res.LOCATION }} |
                     {% if res.LocationOnly %}LOCATION ONLY{% else %}{{res.CTD_QTY_Expr }}{% endif %} 
                     added
-                ###}
+                {##}
                 Count Record {{ res.errmsg }} added
             {% else %}
                 <b>{{ res.errState }}: {{ res.errmsg }}</b>

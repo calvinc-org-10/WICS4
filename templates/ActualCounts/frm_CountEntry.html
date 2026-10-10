@@ -67,6 +67,7 @@
                     tabindex = "-1"
                     onclick="document.getElementById('Material-input-visible').focus();">
                 </span>
+                {#
                 {% if not matlchoiceForm.gotoItem %}
                     <!-- Material has no value yet -->
                 {% elif noSchedInfo %}
@@ -74,6 +75,7 @@
                 {% else %}
                     <b><span class="text-danger">SCHEDULED</span></b>
                 {% endif %}
+                #}
                 <datalist id="Material-list">
                     {% for itm in matlchoiceForm.choicelist %}
                         <option value="{{itm.Material_org}}">

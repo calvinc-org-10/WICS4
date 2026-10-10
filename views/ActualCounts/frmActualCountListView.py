@@ -116,11 +116,6 @@ def fnActualCountListView():
         .limit(max_listrecs)
     )
     actual_count_list = app_db.session.execute(stmt).scalars().all()
-    for record in actual_count_list:
-        qty_eval = None
-        if not record.LocationOnly and record.CTD_QTY_Expr:
-            qty_eval = eval_arith(record.CTD_QTY_Expr)
-        setattr(record, 'CTD_QTY_Eval', qty_eval)
 
     templt = 'ActualCounts/frm_ActualCountList.html'
     cntext = {
