@@ -193,6 +193,13 @@ def define_routes(flskapp):
     #     endpoint='UploadActualCounts'
     #     )
 
+    from views.CountSchedule.CountScheduleListView import fnCountScheduleListView
+    WICS_bp.add_url_rule('/CountScheduleList',
+        view_func=fnCountScheduleListView,
+        methods=['GET', 'POST'],
+        endpoint='CountScheduleList'
+        )
+
     ### SAP Table routes
     #########################
     from views.SAP import procs_SAP
