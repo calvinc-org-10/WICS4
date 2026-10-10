@@ -352,7 +352,7 @@
                 <tbody>
                     {% for ff in scheduleset %}
                     <tr>
-                        <td>{{ ff.id }}{{ ff.id.data }}:&nbsp;</td>
+                        <td>{{ ff.id(type="hidden") }}{{ ff.id.data }}:&nbsp;</td>
                         <td>{{ ff.CountDate(size="10") }}</td>
                         <td>{{ ff.Counter(size="10") }}</td>
                         <td>{{ ff.Priority(size="10") }}</td>

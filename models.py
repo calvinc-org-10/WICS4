@@ -229,8 +229,14 @@ class MaterialList(Base):
 
     PartType: Mapped['WhsePartTypes|None'] = relationship('WhsePartTypes', back_populates='materiallist')
     org: Mapped['Organizations'] = relationship('Organizations', back_populates='materiallist')
-    actualcounts: Mapped[list['ActualCounts']] = relationship('ActualCounts', back_populates='Material')
-    countschedule: Mapped[list['CountSchedule']] = relationship('CountSchedule', back_populates='Material')
+    actualcounts: Mapped[list['ActualCounts']] = relationship(
+        'ActualCounts', back_populates='Material',
+        order_by='[ActualCounts.CountDate.desc(), ActualCounts.id.desc()]'
+    )
+    countschedule: Mapped[list['CountSchedule']] = relationship(
+        'CountSchedule', back_populates='Material',
+        order_by='[CountSchedule.CountDate.desc(), CountSchedule.id.desc()]'
+    )
     materialphotos: Mapped[list['MaterialPhotos']] = relationship('MaterialPhotos', back_populates='Material')
     mfrpntomaterial: Mapped[list['MfrPNtoMaterial']] = relationship('MfrPNtoMaterial', back_populates='Material')
     sap_sohrecs: Mapped[list['SAP_SOHRecs']] = relationship('SAP_SOHRecs', back_populates='Material')

@@ -257,10 +257,6 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
                     app_db.session.add(dbRec_main)
                     changes_saved['main'] = True    # don't need to do this, but keep for now to avoid breaking existing code
 
-                # not needed, even new recs have changed data, but keep for now to avoid breaking existing code
-                # if getattr(dbRec_main, 'id', None) in (None, 0):
-                #     app_db.session.add(dbRec_main)
-
                 app_db.session.flush()
                 currRec = app_db.session.execute(
                     select(modelSubs['main']).options(*related_loads).where(modelSubs['main'].id == dbRec_main.id)
@@ -340,10 +336,6 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
         SAP_SOH = fnSAPList(matl=-1)   # should return empty SAPList
     else:
         SAP_SOH = fnSAPList(matl=currRec)
-    # strip out the SAP_SOH structure that is not needed for the template, to simplify and reduce the amount of data sent to the client.
-    # currently, fixing fnSAPList to return simpler structure. Remove this when verified that fnSAPList is returning the simpler structure.
-    # SAP_SOH = [ 
-    #     SAP_SOH['SAPTable'][i][0]
 
     # assert currRec is not None, 'Material record context not available'
     currRec_org = currRec.org or app_db.session.get(Organizations, _defaultOrg)
@@ -380,30 +372,17 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
         .order_by(SAP.uploaded_at, SAP.MaterialPartNum)
     ).mappings().all()
 
-    raw_countdata = app_db.session.execute(
-        select(ActualCounts)
-        .where(ActualCounts.Material_id == currRec.id)
-        .order_by(ActualCounts.CountDate, ActualCounts.id)
-    )
     raw_countdata = [
         SimpleNamespace(
-            ActualCounts=r.ActualCounts,
-            Material=r.ActualCounts.Material,
-            CountDate=r.ActualCounts.CountDate,
-            QtyEval=0,
+            ActualCounts=r,
+            Material=r.Material,
+            CountDate=r.CountDate,
+            QtyEval=r.CtdQtyEval or 0,
         )
-        for r in raw_countdata
+        for r in currRec.actualcounts
     ]
 
-    for r in raw_countdata:
-        if r.ActualCounts.CTD_QTY_Expr:
-            try:
-                r.QtyEval = r.ActualCounts.CtdQtyEval
-            except Exception:
-                r.QtyEval = 0
-        else:
-            r.QtyEval = 0
-
+    # build Count Summary
     LastMaterial = None
     LastCountDate = None
     summarydata = []
@@ -412,7 +391,10 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
     SAPDate = ''
 
     for r in raw_countdata:
-        if r.Material != LastMaterial or r.CountDate != LastCountDate:
+        NewSummGroup = r.Material != LastMaterial or r.CountDate != LastCountDate
+        if NewSummGroup:
+            summarydata.append(SimpleNamespace(**summrecdict)) if summrecdict else None
+            
             LastMaterial = r.Material
             LastCountDate = r.CountDate
             SAPTot_dateset = [s for s in SAPTotals if s.MaterialPartNum == r.Material and s.uploaded_at <= r.CountDate]
@@ -428,6 +410,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
                 else:
                     SAPDate = ''
                     SAPQty = 0
+            # endif SAPTot_dateset check
 
             summrecdict = {
                 'Material': r.Material,
@@ -436,6 +419,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
                 'SAPDate': SAPDate,
                 'SAPQty': int(SAPQty),
             }
+        # endif new Material/CountDate check
 
         PIQty = summrecdict['CountQTY_Eval'] + r.QtyEval
         summrecdict['CountQTY_Eval'] = PIQty
@@ -445,7 +429,8 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
             divsr = max(PIQty, SAPQty)
         summrecdict['Accuracy'] = f"{min(PIQty, SAPQty) / divsr * 100:.2f}%"
 
-        summarydata.append(SimpleNamespace(**summrecdict))
+    # end for raw_countdata loop
+    summarydata.append(SimpleNamespace(**summrecdict)) if summrecdict else None
 
     prefixSummary = 'summaryset'
     entries = [
