@@ -391,7 +391,10 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
     SAPDate = ''
 
     for r in raw_countdata:
-        if r.Material != LastMaterial or r.CountDate != LastCountDate:
+        NewSummGroup = r.Material != LastMaterial or r.CountDate != LastCountDate
+        if NewSummGroup:
+            summarydata.append(SimpleNamespace(**summrecdict)) if summrecdict else None
+            
             LastMaterial = r.Material
             LastCountDate = r.CountDate
             SAPTot_dateset = [s for s in SAPTotals if s.MaterialPartNum == r.Material and s.uploaded_at <= r.CountDate]
@@ -407,6 +410,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
                 else:
                     SAPDate = ''
                     SAPQty = 0
+            # endif SAPTot_dateset check
 
             summrecdict = {
                 'Material': r.Material,
@@ -415,6 +419,7 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
                 'SAPDate': SAPDate,
                 'SAPQty': int(SAPQty),
             }
+        # endif new Material/CountDate check
 
         PIQty = summrecdict['CountQTY_Eval'] + r.QtyEval
         summrecdict['CountQTY_Eval'] = PIQty
@@ -424,7 +429,8 @@ def fnMaterialForm(recNum=-1, gotoRec=False, newRec=False, HistoryCutoffDate=Non
             divsr = max(PIQty, SAPQty)
         summrecdict['Accuracy'] = f"{min(PIQty, SAPQty) / divsr * 100:.2f}%"
 
-        summarydata.append(SimpleNamespace(**summrecdict))
+    # end for raw_countdata loop
+    summarydata.append(SimpleNamespace(**summrecdict)) if summrecdict else None
 
     prefixSummary = 'summaryset'
     entries = [
