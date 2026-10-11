@@ -1,0 +1,106 @@
+{% extends "cTools_common.html" %}
+
+{% block tTitle %}Counting Agenda/Worksheet{% endblock %}
+{% block customCSS %}
+    @page {
+        /* size: letter portrait; */
+        margin: 0;
+        padding: 0;
+    }
+    .header {
+      position: fixed;
+      top: 0;
+    }
+    .footer {
+      position: fixed;
+      bottom: 0;
+    }
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+    }
+{% endblock %}
+{% block formName %}
+    <span class="container fs-2">
+    Counting Agenda/Worksheet for
+        <select id="gotoID" onchange="loadDate();">
+        {% if not CtSchd %}
+            {# CountDate has no schedule records and should not be a real option #}
+            <option value="" disabled selected hidden>{{ CountDate }}</option>
+        {% endif %}
+        {% for dt in AllScheduledDates %}
+            <option value="{{dt}}"  {# <option value="{{SD|slice:':10'}}"  #}
+            {% if dt == CountDate %} selected{% endif %}
+            >{{dt}}</option>
+        {% endfor %}
+        </select>
+    </span>
+
+    {# SAP Date: {{ SAP_Updated_at }} - #}
+{% endblock %}
+{% block wait_spinner_msgs %}Processing...<br>{% endblock %}
+{% block statusMsgs %}
+    <div id="statecodes" style="display:none">
+        <span id="retStatecode"></span>: <span id="retStatus"></span>
+    </div>
+    <div id="fatalErrMsg"></div>
+    <input id="phase" name="phase" type="hidden" value='init-upl'></input>
+{% endblock %}
+
+{% block boddy %}
+<hr>
+<!-- body -->
+
+{# {% csrf_token %} don't need POST anymore, don't need this (?) #}
+
+<div class="container mx-auto" id="MainWorksheet">
+{% include "CountSchedule/rpt_CountWksht_body.html" %}
+</div>
+
+<!-- form footer -->
+<div class="container d-print-none">
+    <div class="row mx-auto max-width=100%">
+        <div class="col-10">
+        </div>
+        <div class="col-2">
+            <button
+                id="close_btn"
+                type="button"
+            >
+                <img src="{{ url_for('static', filename='stop-road-sign-icon.svg') }}" width="20" height="20"></img>
+                Close Form
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<script>
+const elmtgotoID = document.getElementById("gotoID");
+
+
+function start_wait_spinner() { document.getElementById("wait_spinner").style.display = "block"; };
+function stop_wait_spinner() { document.getElementById("wait_spinner").style.display = "none"; };
+
+function show_statecodes() { document.getElementById("statecodes").style.display = "block"; };
+function hide_statecodes() { document.getElementById("statecodes").style.display = "none"; };
+
+function loadDate() {
+    // send #gotoID back into the url
+    dVal = elmtgotoID.value;
+
+    newRec = "{{ url_for('WICS.CountWorksheet', CountDate='passedDate') }}";
+    newRec = newRec.replace("/passedDate","/"+dVal);
+    start_wait_spinner();
+    window.location = newRec;
+    stop_wait_spinner();
+};
+
+document.getElementById("close_btn").addEventListener("click",
+    function(){
+        window.close();
+});
+
+</script>
+
+{% endblock %}

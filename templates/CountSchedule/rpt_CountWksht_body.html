@@ -1,0 +1,179 @@
+
+{% for itm in CtSchd %}
+    {% if loop.changed(itm.Counter) %}
+        {% if not loop.first %}
+            {# print summary of Materials for previous Counter #}
+            {% for M in CtSchd %}
+            {% if loop.first %}<hr><div class="fs-4" style="break-before: page;"><u>{{itm.prevCounter|default("")}} Materials</u><ul>{% endif %}
+                {% if M.Counter == itm.prevCounter %}
+                <li>
+                    {{ MatlInfo[M.Material_id].bcstr|safe }}
+                    {{ M.Material.orgMaterialNum }}
+                </li>
+                {% endif %}
+            {% if loop.last %}</ul></div>{% endif %}
+            {% endfor %}
+
+            {# do later ...
+            { # print summary of locations for previous Counter # }
+            {% for L in LocationList %}
+            {% if loop.first %}
+                <hr><div class="fs-4" style="break-before: page;">
+                <u>{{itm.prevCounter|default:""}} Locations</u>
+                <div class="small"><i>Material may be in locations not listed here</i></div>
+                <ul>
+            {% endif %}
+            {% if L.Counter == itm.prevCounter %}
+            <li>{{ L.FoundAt }} | {{ L.CountDate }} | {{ L.Material_org }}</li>
+            {% endif %}
+            {% if loop.last %}</ul></div>{% endif %}
+            {% endfor %}
+            #}
+
+            <!-- close off the previous counter-->
+            </div>
+            <!-- <hr> -->
+        {% endif %}
+        <div class="container" style="break-after: page;">
+        <div class="row max-width=100%">
+            <div class="col-11">
+                <h2>
+                    {{ itm.Counter|default("") }} Counting Agenda/Worksheet for {{ CountDate.strftime('%Y-%m-%d') }}
+                </h2>
+            </div>
+            <div class="col-1 text-end">
+                <img src={{ url_for('static', filename='WICS-Logo.png') }} width="150" height="70">
+            </div>
+        </div>
+    {% endif %}
+
+    <div style="break-inside: avoid;">  <!-- avoid page breaks for a single Material sheet -->
+    <div class="row g-0 max-width=100%">
+        <div class="col-5">
+            {{ MatlInfo[itm.Material_id].bcstr|safe }}
+        </div>
+        <div class="col-4 fs-5">
+            Material {{ itm.Material.orgMaterialNum }}
+        </div>
+    </div>
+    <div class="row g-0">
+        <div class="col-11">
+            {{ CountDate.strftime('%Y-%m-%d') }} |
+            {% if itm.Material.PartType %}
+                {{ itm.Material.PartType.WhsePartType|default("NO PART TYPE") }} |
+            {% else %}
+                NO PART TYPE |
+            {% endif %}
+            Prio: <b>{{ itm.Priority|default("---") }}</b> |
+            Sched Counter: {{ itm.Counter|default("---") }} |
+            {{ itm.Material.Description|default("") }}
+        </div>
+    </div>
+    <div class="row g-0">
+        <div class="col-11">
+        Typical Container Qty = {{ itm.Material.TypicalContainerQty }},
+        Typical Pallet Qty = {{ itm.Material.TypicalPalletQty }} |
+        Last Found On {{ MatlInfo[itm.Material_id].LastCountDate|default("---") }} At {{ MatlInfo[itm.Material_id].LastFoundAt|default("---") }}
+        </div>
+    </div>
+    <div class="row g-0 calvin-smalltext">
+        <div class="col-12">
+        dbid {{ itm.id }} |
+        Requestor: {{ itm.Requestor }} | RequestFilled: {{ "yes" if itm.RequestFilled else "no" }} |
+        Reason Scheduled: {{ itm.ReasonScheduled }} | Notes: {{ itm.Notes }} | SAP Qty: {{ itm.SAPQty }}
+        {% if itm.Material.Notes %}
+        <br>
+        Material Notes: {{ itm.Material.Notes }}
+        {% endif %}
+        </div>
+    </div>
+    <br>
+    <div class="row g-0 fs-3">
+        <div class="col-8">Act Cntr: ________________________</div>
+        <div class="col">Date: _____________</div>
+    </div>
+    <div class="row g-0">
+        <table>
+            <thead>
+            <tr>
+                <th style="width:20%">LOCATION</th>
+                <th style="width:60%">CTD_QTY_Expr</th>
+                <th style="width:20%">Notes</th>
+            </tr>
+            </thead>
+            <tbody>
+            {# do LocationList later ...
+            {% for L in LocationList %}
+            {% if forloop.first %}<ul>{% endif %}
+                {% if L.Material == itm.Material.id %}
+                <tr style="height:60px">
+                    <td style="vertical-align:top;">{{ L.FoundAt }}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                {% endif %}
+            {% if forloop.last %}</ul>{% endif %}
+            {% endfor %}
+            #}
+            <tr style="height:60px">
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr style="height:60px">
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr style="height:60px">
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr style="height:60px">
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <hr>
+    </div>  <!-- style="break-inside: avoid;">  {!-- avoid page breaks for a single Material sheet -->
+    {% if loop.last %}
+        {# print summary of Materials for previous Counter #}
+        {% for M in CtSchd %}
+        {% if loop.first %}<hr><div class="fs-4" style="break-before: page;"><u>{{itm.prevCounter|default("")}} Materials</u><ul>{% endif %}
+            {% if M.Counter == itm.Counter %}
+            <li>
+                {{ MatlInfo[M.Material_id].bcstr|safe }}
+                {{ M.Material.orgMaterialNum }}
+            </li>
+        {% endif %}
+        {% if loop.last %}</ul></div>{% endif %}
+        {% endfor %}
+
+        {# do LocationList later ...
+        { # print summary of locations for previous Counter # }
+        {% for L in LocationList %}
+        {% if forloop.first %}
+            <hr><div class="fs-4" style="break-before: page;">
+            <u>{{itm.prevCounter|default:""}} Locations</u>
+            <div class="small"><i>Material may be in locations not listed here</i></div>
+            <ul>
+        {% endif %}
+        {% if L.Counter == itm.Counter %}
+        <li>{{ L.FoundAt }} | {{ L.CountDate }} | {{ L.Material_org }}</li>
+        {% endif %}
+        {% if forloop.last %}</ul></div>{% endif %}
+        {% endfor %}
+        #}
+
+        <!-- close off the previous counter-->
+        </div>
+        <hr class="d-print-none">
+    {% endif %}
+{% else %}
+    <h2>No Counts scheduled for {{ CountDate.strftime('%Y-%m-%d') }}</h2>
+{% endfor %}

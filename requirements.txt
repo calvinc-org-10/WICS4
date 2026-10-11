@@ -18,6 +18,7 @@ sqlparse==0.5.3
 python-dateutil==2.9.0.post0
 tzdata==2024.2
 huey
+python-barcode
 
 # Development and Testing Dependencies
 pytest>=7.0

@@ -200,6 +200,28 @@ def define_routes(flskapp):
         endpoint='CountScheduleList'
         )
 
+    ### Count Worksheet report routes
+    #########################
+    from views.CountSchedule.CountWorksheetReportView import viewCountWorksheetReport
+    WICS_bp.add_url_rule('/CountWorksheet',
+        view_func=viewCountWorksheetReport,
+        methods=['GET', 'POST'],
+        endpoint='CountWorksheet-init'
+        )
+    WICS_bp.add_url_rule('/CountWorksheet/<string:CountDate>',
+        view_func=viewCountWorksheetReport,
+        methods=['GET', 'POST'],
+        endpoint='CountWorksheet'
+        )
+    # path('CountWorksheet',
+    #         procs_CountSchedule.viewCountWorksheetReport,name='CountWorksheet-init'),
+    # path('CountWorksheet/<CountDate>',
+    #         procs_CountSchedule.viewCountWorksheetReport,name='CountWorksheet'),
+    # path('CountWorksheetLoc',
+    #         procs_CountSchedule.viewCountWorksheetLocReport,name='CountWorksheetLoc-init'),
+    # path('CountWorksheetLoc/<CountDate>',
+    #         procs_CountSchedule.viewCountWorksheetLocReport,name='CountWorksheetLoc'),
+
     ### SAP Table routes
     #########################
     from views.SAP import procs_SAP
@@ -228,24 +250,6 @@ def define_routes(flskapp):
     # path('MaterialForm/histcutoff/<int:recNum>/<str:HistoryCutoffDate>',
     #         procs_Material.fnMaterialForm, name='MatlFormChgHistCutoffDate'),
 
-    # path('ActualCountList',
-    #         procs_ActualCounts.ActualCountListForm.as_view(), name='ActualCountList'),
-
-    # path('CountScheduleList',
-    #         procs_CountSchedule.CountScheduleListForm.as_view(),name='CountScheduleList'),
-
-
-    # path('CountScheduleForm',
-    #         views.fnCountScheduleRecView, name='CountScheduleForm'),
-    # path('CountScheduleForm/Go/<int:recNum>',
-    #         views.fnCountScheduleRecView, name='CountScheduleFormGo'),
-    # path('CountScheduleForm/Go/<int:recNum>/<str:gotoCommand>',
-    #         views.fnCountScheduleRecView,
-    #         name='CountScheduleFormGo'),    
-    # path('CountScheduleForm/<int:recNum>/<str:reqDate>/<str:MatlNum>',
-    #         views.fnCountScheduleRecView, {'gotoCommand':'ChgKey'},
-    #         name='CountScheduleForm'),
-
     # path('RequestCountScheduleForm',
     #         views.fnRequestCountScheduleRecView, name='RequestCountScheduleForm'),
     # path('RequestCountScheduleForm/<int:recNum>/<str:reqDate>/<str:MatlNum>',
@@ -255,15 +259,6 @@ def define_routes(flskapp):
     #         views.fnRequestedCountEditListView, name='RequestCountListEdit'),
     # path('RequestedCountListEdit/<int:ShowFilledRequests>',
     #         views.fnRequestedCountEditListView, name='RequestCountListEditShowFilled'),
-
-    # path('CountWorksheet',
-    #         procs_CountSchedule.viewCountWorksheetReport,name='CountWorksheet'),
-    # path('CountWorksheet/<CountDate>',
-    #         procs_CountSchedule.viewCountWorksheetReport,name='CountWorksheet'),
-    # path('CountWorksheetLoc',
-    #         procs_CountSchedule.viewCountWorksheetLocReport,name='CountWorksheetLoc'),
-    # path('CountWorksheetLoc/<CountDate>',
-    #         procs_CountSchedule.viewCountWorksheetLocReport,name='CountWorksheetLoc'),
 
     # path('MPN',
     #         procs_Material.fnMPNView, name='MPNLookup'),
