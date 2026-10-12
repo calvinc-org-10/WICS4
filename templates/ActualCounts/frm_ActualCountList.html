@@ -22,6 +22,7 @@
         {% if csrf_token is defined %}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% endif %}
+        <input type="hidden" id="formAction" name="action" value="">
         <input type="hidden" id="copyCountFromid" name="copyCountFromid" value="">
         <input type="hidden" id="copyCountToDate" name="copyCountToDate" value="">
         <input type="hidden" id="deleteCountid" name="deleteCountid" value="">
@@ -96,21 +97,29 @@
 
 {% block postFormScripts %}
 <script>
+    const frmCountActions   = document.getElementById("countListActions");
+    const elmntAction       = document.getElementById("formAction");
+    const elmntCopyFromid   = document.getElementById("copyCountFromid");
+    const elmntCountToDate  = document.getElementById("copyCountToDate");
+    const elmntDelID        = document.getElementById("deleteCountid");
+    const elmntAddBtn       = document.getElementById("add_btn");
+
     function editCount(idToEdit) {
         let targetUrl = "{{ url_for('WICS.CountEntryFormGo', recNum=0) }}";
         targetUrl = targetUrl.replace("/0", "/" + String(idToEdit));
         window.open(targetUrl, "_blank");
     }
 
-    document.getElementById("add_btn").addEventListener("click", function() {
+    elmntAddBtn.addEventListener("click", function() {
         const targetUrl = "{{ url_for('WICS.CountEntryForm') }}";
         window.open(targetUrl, "_blank");
     });
 
     function clearActionInputs() {
-        document.getElementById("copyCountFromid").value = "";
-        document.getElementById("copyCountToDate").value = "";
-        document.getElementById("deleteCountid").value = "";
+        elmntAction.value = "";
+        elmntCopyFromid.value = "";
+        elmntCountToDate.value = "";
+        elmntDelID.value = "";
     }
 
     function copyCount(idToCopy) {
@@ -121,9 +130,10 @@
         }
 
         clearActionInputs();
-        document.getElementById("copyCountFromid").value = String(idToCopy);
-        document.getElementById("copyCountToDate").value = copyDate.trim();
-        document.getElementById("countListActions").requestSubmit();
+        elmntCopyFromid.value = String(idToCopy);
+        elmntCountToDate.value = copyDate.trim();
+        elmntAction.value = "copy";
+        frmCountActions.requestSubmit();
     }
 
     function deleteCount(idToDelete) {
@@ -132,8 +142,9 @@
         }
 
         clearActionInputs();
-        document.getElementById("deleteCountid").value = String(idToDelete);
-        document.getElementById("countListActions").requestSubmit();
+        elmntDelID.value = String(idToDelete);
+        elmntAction.value = "delete"
+        frmCountActions.requestSubmit();
     }
 </script>
 {% endblock %}

@@ -56,7 +56,8 @@ def _parse_post_date(name: str) -> date:
 @login_required
 def fnActualCountListView():
     if request.method == 'POST':
-        if 'copyCountFromid' in request.form:
+        action = request.form.get('action')
+        if action == 'copy':
             try:
                 copy_count_from_id = _parse_post_int('copyCountFromid')
                 copy_count_to_date = _parse_post_date('copyCountToDate')
@@ -90,7 +91,7 @@ def fnActualCountListView():
             )
             return redirect(url_for('WICS.ActualCountList'))
 
-        if 'deleteCountid' in request.form:
+        if action == 'delete':
             try:
                 delete_count_id = _parse_post_int('deleteCountid')
             except ValueError as ex:

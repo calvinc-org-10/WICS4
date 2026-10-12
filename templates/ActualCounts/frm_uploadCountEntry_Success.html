@@ -14,19 +14,14 @@
     <ul>
     {% for res in UplResults %}
         <li>
-    {###
-    errState = models.CharField(max_length=100, null=True)
-    errmsg = models.CharField(max_length=512, null=True)
-    rowNum = models.IntegerField(null=True)
-    ###}
             Sprsht row {{ res.rowNum }}, 
             {% if 'error' not in res.errState %}
-                {##}
-                Count Record {{ res.id }}: {{ res.CountDate|date:'Y-m-d '}} | {{ res.MaterialNum }} |
+                {#
+                Count Record {{ res.id }}: {{ res.CountDate.strftime('%Y-%m-%d ')}} | {{ res.Material.orgMaterialNum }} |
                     {{ res.Counter }} | {{ res.LOCATION }} |
                     {% if res.LocationOnly %}LOCATION ONLY{% else %}{{res.CTD_QTY_Expr }}{% endif %} 
                     added
-                {##}
+                #}
                 Count Record {{ res.errmsg }} added
             {% else %}
                 <b>{{ res.errState }}: {{ res.errmsg }}</b>
