@@ -393,7 +393,7 @@ def proc_UpActCountSprsheet_01ReadSheet(reqid: Any, fName: str) -> None:
                     app_db.session.add(SRec)
                     if MatChanged: app_db.session.add(MatObj)
                     app_db.session.commit()
-                    resultString = str(SRec)
+                    resultString += f'{SRec.id}: {SRec.CountDate} / {SRec.Material.orgMaterialNum} / {SRec.Counter} / {SRec.LOCATION}'
                     resultString += ' / LOCATION ONLY'  if SRec.LocationOnly else f' / Qty= {SRec.CTD_QTY_Expr}'
                     resultString += ' (Typ Cont Qty/Typ Plt Qty also changed)' if MatChanged else ''
                     resRec = UploadSAPResults(
