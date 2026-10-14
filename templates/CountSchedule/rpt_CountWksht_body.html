@@ -72,7 +72,8 @@
     <div class="row g-0">
         <div class="col-11">
         Typical Container Qty = {{ itm.Material.TypicalContainerQty }},
-        Typical Pallet Qty = {{ itm.Material.TypicalPalletQty }} |
+        Typical Pallet Qty = {{ itm.Material.TypicalPalletQty }}
+        <br>
         Last Found On {{ MatlInfo[itm.Material_id].LastCountDate|default("---") }} At {{ MatlInfo[itm.Material_id].LastFoundAt|default("---") }}
         </div>
     </div>
@@ -102,19 +103,13 @@
             </tr>
             </thead>
             <tbody>
-            {# do LocationList later ...
-            {% for L in LocationList %}
-            {% if forloop.first %}<ul>{% endif %}
-                {% if L.Material == itm.Material.id %}
+            {% for L in MatlInfo[itm.Material_id].LastFoundAt %}
                 <tr style="height:60px">
-                    <td style="vertical-align:top;">{{ L.FoundAt }}</td>
+                    <td style="vertical-align:top;">{{ L }}</td>
                     <td></td>
                     <td></td>
                 </tr>
-                {% endif %}
-            {% if forloop.last %}</ul>{% endif %}
             {% endfor %}
-            #}
             <tr style="height:60px">
                 <td></td>
                 <td></td>
