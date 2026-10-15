@@ -82,8 +82,6 @@
                 </button>
             </div>
             <div class="col-3">
-            {# MAKE ME CHANGABLE !!!! #}
-                max Count Records shown: {{ max_listrecs }}
             </div>
             <div class="col-5"></div>
             <div class="col-2">
@@ -92,6 +90,16 @@
                     Close Form
                 </button>
             </div>
+        </div>
+        <div class="row mx-auto max-width=100%">
+            <span>
+            max Count Records shown: <input type="number" id="per-page" max={{ max_listrecs }} value={{ pagination.per_page }} style="width:8ch;">.
+            records {{ pagination.first }} to {{ pagination.last }}. 
+            iter_pages = 
+                {% for p in pagination.iter_pages() %}
+                    {{ p }}, 
+                {% endfor %}
+            </span>
         </div>
     </div>
 {% endblock %}
@@ -104,6 +112,19 @@
     const elmntCountToDate  = document.getElementById("copyCountToDate");
     const elmntDelID        = document.getElementById("deleteCountid");
     const elmntAddBtn       = document.getElementById("add_btn");
+    
+    const elmntPerPage      = document.getElementById("per-page");
+    const gopageFirst       = null;
+    const gopagePrev        = null;
+    const gopageNext        = null;
+    const gopageLast        = null;
+
+
+    elmntPerPage.addEventListener('change', (event) => {
+        const thisURL = {{ url_for('WICS.ActualCountList', page=-100, per_page=-200) | tojson }};
+        const thisPg = {{ pagination.page }};
+        window.location = thisURL.replace("=-100",`=${thisPg}`).replace("=-200",`=${elmntPerPage.value}`);
+    });
 
     function editCount(idToEdit) {
         let targetUrl = "{{ url_for('WICS.CountEntryFormGo', recNum=0) }}";

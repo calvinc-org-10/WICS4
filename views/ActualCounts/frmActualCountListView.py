@@ -55,6 +55,12 @@ def _parse_post_date(name: str) -> date:
 
 @login_required
 def fnActualCountListView():
+    max_listrecs = _get_max_listrecs()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    per_page = max(1, min(per_page, max_listrecs))  # clamp to the existing cap
+    page = max(1, page)
+
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'copy':
@@ -63,7 +69,7 @@ def fnActualCountListView():
                 copy_count_to_date = _parse_post_date('copyCountToDate')
             except ValueError as ex:
                 flash(str(ex), 'error')
-                return redirect(url_for('WICS.ActualCountList'))
+                return redirect(url_for('WICS.ActualCountList', page=page, per_page=per_page))
 
             source_count = app_db.session.get(ActualCounts, copy_count_from_id)
             if source_count is None:
@@ -89,7 +95,7 @@ def fnActualCountListView():
                 f'Count copied successfully from ID {copy_count_from_id} to record {copied_count.id}, date {copy_count_to_date}',
                 'success',
             )
-            return redirect(url_for('WICS.ActualCountList'))
+            return redirect(url_for('WICS.ActualCountList', page=page, per_page=per_page))
 
         if action == 'delete':
             try:
@@ -104,23 +110,25 @@ def fnActualCountListView():
             app_db.session.delete(delete_count)
             app_db.session.commit()
             flash(f'Deleted count record {delete_count_id}.', 'success')
-            return redirect(url_for('WICS.ActualCountList'))
+            return redirect(url_for('WICS.ActualCountList', page=page, per_page=per_page))
 
         abort(400, 'Unsupported Actual Count List operation.')
 
-    max_listrecs = _get_max_listrecs()
     stmt = (
         select(ActualCounts)
         .options(joinedload(ActualCounts.Material))
         .join(MaterialList, ActualCounts.Material_id == MaterialList.id)
         .order_by(ActualCounts.CountDate.desc(), MaterialList.Material, ActualCounts.id)
-        .limit(max_listrecs)
+    #     .limit(max_listrecs)
     )
-    actual_count_list = app_db.session.execute(stmt).scalars().all()
+    # actual_count_list = app_db.session.execute(stmt).scalars().all()
+
+    pagination = app_db.paginate(stmt, page=page, per_page=per_page, max_per_page=max_listrecs)
 
     templt = 'ActualCounts/frm_ActualCountList.html'
     cntext = {
-        'ActCtList': actual_count_list,
+        'ActCtList': pagination.items,
+        'pagination': pagination,
         'max_listrecs': max_listrecs,
     }
     return checkTemplate_and_render(
