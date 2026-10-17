@@ -12,7 +12,6 @@ from flask_login import login_required
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from calvincTools.mathexpr_parser import eval_arith
 from calvincTools.utils import checkTemplate_and_render
 from database import app_db
 from models import CountSchedule, MaterialList
@@ -33,6 +32,7 @@ def _get_max_listrecs() -> int:
 def _parse_post_int(name: str) -> int:
     raw_value = request.form.get(name, '').strip()
     if not raw_value:
+        #TODO: This helper aborts with HTTP 400 for missing values, but callers are catching ValueError to flash-and-redirect, so missing fields will bypass that handling and return a hard 400. Consider raising ValueError here (like _parse_post_date does) so the UI error flow is consistent.
         abort(400, f'Missing required field {name}.')
     try:
         parsed_value = int(raw_value)
@@ -55,21 +55,27 @@ def _parse_post_date(name: str) -> date:
 
 @login_required
 def fnCountScheduleListView():
+    max_listrecs = _get_max_listrecs()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    per_page = max(1, min(per_page, max_listrecs))  # clamp to the existing cap
+    page = max(1, page)
+
     if request.method == 'POST':
-        # leftover code from Actual Count List view - to be removed or adapted for Count Schedule List view
-        if 'copyCountFromid' in request.form:
+        action = request.form.get('action')
+        if action == 'copy':
             try:
                 copy_count_from_id = _parse_post_int('copyCountFromid')
                 copy_count_to_date = _parse_post_date('copyCountToDate')
             except ValueError as ex:
                 flash(str(ex), 'error')
-                return redirect(url_for('WICS.CountScheduleList'))
+                return redirect(url_for('WICS.CountScheduleList', page=page, per_page=per_page))
 
             source_count = app_db.session.get(CountSchedule, copy_count_from_id)
             if source_count is None:
                 abort(404, f'Count record {copy_count_from_id} not found.')
 
-            # check to be sure schedule for the target date does not already exist
+            # TODO: check to be sure schedule for the target date does not already exist
 
             copied_count = CountSchedule(
                 CountDate=copy_count_to_date,
@@ -89,14 +95,14 @@ def fnCountScheduleListView():
                 f'Count copied successfully from ID {copy_count_from_id} to record {copied_count.id}, date {copy_count_to_date}',
                 'success',
             )
-            return redirect(url_for('WICS.CountScheduleList'))
+            return redirect(url_for('WICS.CountScheduleList', page=page, per_page=per_page))
 
-        if 'deleteCountid' in request.form:
+        if action == 'delete':
             try:
                 delete_count_id = _parse_post_int('deleteCountid')
             except ValueError as ex:
                 flash(str(ex), 'error')
-                return redirect(url_for('WICS.CountScheduleList'))
+                return redirect(url_for('WICS.CountScheduleList', page=page, per_page=per_page))
 
             delete_count = app_db.session.get(CountSchedule, delete_count_id)
             if delete_count is None:
@@ -104,23 +110,22 @@ def fnCountScheduleListView():
             app_db.session.delete(delete_count)
             app_db.session.commit()
             flash(f'Deleted count record {delete_count_id}.', 'success')
-            return redirect(url_for('WICS.CountScheduleList'))
+            return redirect(url_for('WICS.CountScheduleList', page=page, per_page=per_page))
 
-        abort(400, 'Unsupported Actual Count List operation.')
+        abort(400, 'Unsupported operation.')
 
-    max_listrecs = _get_max_listrecs()
     stmt = (
         select(CountSchedule)
         .options(joinedload(CountSchedule.Material))
         .join(MaterialList, CountSchedule.Material_id == MaterialList.id)
         .order_by(CountSchedule.CountDate.desc(), MaterialList.Material, CountSchedule.id)
-        .limit(max_listrecs)
     )
-    actual_count_list = app_db.session.execute(stmt).scalars().all()
+    pagination = app_db.paginate(stmt, page=page, per_page=per_page, max_per_page=max_listrecs)
 
     templt = 'CountSchedule/CountScheduleList.html'
     cntext = {
-        'ActCtList': actual_count_list,
+        'ActCtList': pagination.items,
+        'pagination': pagination,
         'max_listrecs': max_listrecs,
     }
     return checkTemplate_and_render(
