@@ -18,7 +18,7 @@ from database import app_db
 from models import ActualCounts, MaterialList
 
 
-_MAX_LISTRECS = 5000
+_MAX_LISTRECS = 500
 
 
 def _get_max_listrecs() -> int:
@@ -121,8 +121,6 @@ def fnActualCountListView():
         .order_by(ActualCounts.CountDate.desc(), MaterialList.Material, ActualCounts.id)
     #     .limit(max_listrecs)
     )
-    # actual_count_list = app_db.session.execute(stmt).scalars().all()
-
     pagination = app_db.paginate(stmt, page=page, per_page=per_page, max_per_page=max_listrecs)
 
     templt = 'ActualCounts/frm_ActualCountList.html'

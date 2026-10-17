@@ -22,6 +22,7 @@
         {% if csrf_token is defined %}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% endif %}
+        <input type="hidden" id="formAction" name="action" value="">
         <input type="hidden" id="copyCountFromid" name="copyCountFromid" value="">
         <input type="hidden" id="copyCountToDate" name="copyCountToDate" value="">
         <input type="hidden" id="deleteCountid" name="deleteCountid" value="">
@@ -69,15 +70,40 @@
 {% block layoutButtons %}
     <hr>
     <div class="container">
+        <div class="row mx-auto text-center max-width=100%">
+            <span> <!- is span necessary ????? Yes it is, otherwise the buttons fill entire div width -->
+				<button id="gopageFirst" {% if not pagination.has_prev %}disabled {% endif %}>
+                    <i class="bi bi-skip-backward"></i>
+                    First page
+                </button>
+				<button id="gopagePrev" {% if not pagination.has_prev %}disabled {% endif %}>
+                    <i class="bi bi-arrow-left"></i>
+                    page {{ pagination.prev_num }}
+                </button>
+
+				page <input type="number" id="gopageN" max={{ pagination.pages }} value={{ pagination.page }} style="width:8ch;">
+                  of {{ pagination.pages }}
+				(records {{ pagination.first }} to {{ pagination.last }}) 
+
+				<button id="gopageNext" {% if not pagination.has_next %}disabled {% endif %}>
+                    <img>
+                    page {{ pagination.next_num }}
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+				<button id="gopageLast" {% if not pagination.has_next %}disabled {% endif %}>
+                    Last page
+                    <i class="bi bi-skip-forward"></i>
+                </button>
+				<br>
+				<input type="number" id="per-page" max={{ max_listrecs }} value={{ pagination.per_page }} style="width:8ch;"> records per page
+            </span>
+        </div>
         <div class="row mx-auto max-width=100%">
             <div class="col-2">
                 <button id="add_btn" type="button">
                     <img src="{{ url_for('static', filename='addition-color-outline-icon.svg') }}" width="20" height="20">
                     Add New Count
                 </button>
-            </div>
-            <div class="col-3">
-                max Count Records shown: {{ max_listrecs }}
             </div>
             <div class="col-5"></div>
             <div class="col-2">
@@ -92,21 +118,60 @@
 
 {% block postFormScripts %}
 <script>
+    const frmCountActions   = document.getElementById("countListActions");
+    const elmntAction       = document.getElementById("formAction");
+    const elmntCopyFromid   = document.getElementById("copyCountFromid");
+    const elmntCountToDate  = document.getElementById("copyCountToDate");
+    const elmntDelID        = document.getElementById("deleteCountid");
+    const elmntAddBtn       = document.getElementById("add_btn");
+    
+    const elmntPerPage      = document.getElementById("per-page");
+    const gopageFirst       = document.getElementById("gopageFirst");
+    const gopagePrev        = document.getElementById("gopagePrev");
+    const gopageNext        = document.getElementById("gopageNext");
+    const gopageLast        = document.getElementById("gopageLast");
+    const gopageN           = document.getElementById("gopageN");
+
+    function gotoPage(GoPage, GoPerPage) {
+        const thisURL = {{ url_for('WICS.CountScheduleList', page=-100, per_page=-200) | tojson }};
+        window.location = thisURL.replace("=-100",`=${GoPage}`).replace("=-200",`=${GoPerPage}`);
+    }
+
+    gopageFirst.addEventListener('click', () => {
+        gotoPage(1, elmntPerPage.value);
+    });
+    gopagePrev.addEventListener('click', () => {
+        gotoPage({{pagination.prev_num}}, elmntPerPage.value);
+    });
+    gopageNext.addEventListener('click', () => {
+        gotoPage({{pagination.next_num}}, elmntPerPage.value);
+    });
+    gopageLast.addEventListener('click', () => {
+        gotoPage({{pagination.pages}}, elmntPerPage.value);
+    });
+    gopageN.addEventListener('change', () => {
+        gotoPage(gopageN.value, elmntPerPage.value);
+    });
+    elmntPerPage.addEventListener('change', () => {
+        gotoPage({{pagination.page}}, elmntPerPage.value);
+    });
+
     function editCount(idToEdit) {
         let targetUrl = "{{ url_for('WICS.CountScheduleFormGo', recNum=0) }}";
         targetUrl = targetUrl.replace("/0", "/" + String(idToEdit));
         window.open(targetUrl, "_blank");
     }
 
-    document.getElementById("add_btn").addEventListener("click", function() {
+    elmntAddBtn.addEventListener("click", function() {
         const targetUrl = "{{ url_for('WICS.CountScheduleForm') }}";
         window.open(targetUrl, "_blank");
     });
 
     function clearActionInputs() {
-        document.getElementById("copyCountFromid").value = "";
-        document.getElementById("copyCountToDate").value = "";
-        document.getElementById("deleteCountid").value = "";
+        elmntAction.value = "";
+        elmntCopyFromid.value = "";
+        elmntCountToDate.value = "";
+        elmntDelID.value = "";
     }
 
     function copyCount(idToCopy) {
@@ -117,9 +182,10 @@
         }
 
         clearActionInputs();
-        document.getElementById("copyCountFromid").value = String(idToCopy);
-        document.getElementById("copyCountToDate").value = copyDate.trim();
-        document.getElementById("countListActions").requestSubmit();
+        elmntCopyFromid.value = String(idToCopy);
+        elmntCountToDate.value = copyDate.trim();
+        elmntAction.value = "copy";
+        frmCountActions.requestSubmit();
     }
 
     function deleteCount(idToDelete) {
@@ -128,8 +194,9 @@
         }
 
         clearActionInputs();
-        document.getElementById("deleteCountid").value = String(idToDelete);
-        document.getElementById("countListActions").requestSubmit();
+        elmntDelID.value = String(idToDelete);
+        elmntAction.value = "delete";
+        frmCountActions.requestSubmit();
     }
 </script>
 {% endblock %}
