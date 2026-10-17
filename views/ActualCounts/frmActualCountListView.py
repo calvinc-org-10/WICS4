@@ -12,7 +12,7 @@ from flask_login import login_required
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from calvincTools.mathexpr_parser import eval_arith
+# from calvincTools.mathexpr_parser import eval_arith
 from calvincTools.utils import checkTemplate_and_render
 from database import app_db
 from models import ActualCounts, MaterialList
@@ -33,6 +33,7 @@ def _get_max_listrecs() -> int:
 def _parse_post_int(name: str) -> int:
     raw_value = request.form.get(name, '').strip()
     if not raw_value:
+        #TODO: This helper aborts with HTTP 400 for missing values, but callers are catching ValueError to flash-and-redirect, so missing fields will bypass that handling and return a hard 400. Consider raising ValueError here (like _parse_post_date does) so the UI error flow is consistent.
         abort(400, f'Missing required field {name}.')
     try:
         parsed_value = int(raw_value)
@@ -102,7 +103,7 @@ def fnActualCountListView():
                 delete_count_id = _parse_post_int('deleteCountid')
             except ValueError as ex:
                 flash(str(ex), 'error')
-                return redirect(url_for('WICS.ActualCountList'))
+                return redirect(url_for('WICS.ActualCountList', page=page, per_page=per_page))
 
             delete_count = app_db.session.get(ActualCounts, delete_count_id)
             if delete_count is None:
@@ -119,7 +120,6 @@ def fnActualCountListView():
         .options(joinedload(ActualCounts.Material))
         .join(MaterialList, ActualCounts.Material_id == MaterialList.id)
         .order_by(ActualCounts.CountDate.desc(), MaterialList.Material, ActualCounts.id)
-    #     .limit(max_listrecs)
     )
     pagination = app_db.paginate(stmt, page=page, per_page=per_page, max_per_page=max_listrecs)
 

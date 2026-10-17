@@ -74,13 +74,13 @@
 {% block layoutButtons %}
     <hr>
     <div class="container">
-        <div class="row mx-auto text-center max-width=100%">
-            <span> <!- is span necessary ????? Yes it is, otherwise the buttons fill entire div width -->
-				<button id="gopageFirst" {% if not pagination.has_prev %}disabled {% endif %}>
+        <div class="row mx-auto text-center">
+            <span> <!-- is span necessary ????? Yes it is, otherwise the buttons fill entire div width -->
+				<button id="gopageFirst" type="button" {% if not pagination.has_prev %}disabled {% endif %}>
                     <i class="bi bi-skip-backward"></i>
                     First page
                 </button>
-				<button id="gopagePrev" {% if not pagination.has_prev %}disabled {% endif %}>
+				<button id="gopagePrev" type="button" {% if not pagination.has_prev %}disabled {% endif %}>
                     <i class="bi bi-arrow-left"></i>
                     page {{ pagination.prev_num }}
                 </button>
@@ -89,12 +89,11 @@
                   of {{ pagination.pages }}
 				(records {{ pagination.first }} to {{ pagination.last }}) 
 
-				<button id="gopageNext" {% if not pagination.has_next %}disabled {% endif %}>
-                    <img>
+				<button id="gopageNext" type="button" {% if not pagination.has_next %}disabled {% endif %}>
                     page {{ pagination.next_num }}
                     <i class="bi bi-arrow-right"></i>
                 </button>
-				<button id="gopageLast" {% if not pagination.has_next %}disabled {% endif %}>
+				<button id="gopageLast" type="button" {% if not pagination.has_next %}disabled {% endif %}>
                     Last page
                     <i class="bi bi-skip-forward"></i>
                 </button>

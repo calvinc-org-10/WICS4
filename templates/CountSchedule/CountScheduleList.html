@@ -70,34 +70,37 @@
 {% block layoutButtons %}
     <hr>
     <div class="container">
-        <div class="row mx-auto text-center max-width=100%">
-            <span> <!- is span necessary ????? Yes it is, otherwise the buttons fill entire div width -->
-				<button id="gopageFirst" {% if not pagination.has_prev %}disabled {% endif %}>
+        <div class="row mx-auto text-center">
+            <span> <!-- is span necessary ????? Yes it is, otherwise the buttons fill entire div width -->
+				<button id="gopageFirst" type="button" {% if not pagination.has_prev %}disabled {% endif %}>
                     <i class="bi bi-skip-backward"></i>
                     First page
                 </button>
-				<button id="gopagePrev" {% if not pagination.has_prev %}disabled {% endif %}>
+				<button id="gopagePrev" type="button" {% if not pagination.has_prev %}disabled {% endif %}>
                     <i class="bi bi-arrow-left"></i>
                     page {{ pagination.prev_num }}
                 </button>
 
-				page <input type="number" id="gopageN" max={{ pagination.pages }} value={{ pagination.page }} style="width:8ch;">
+				page <input type="number" id="gopageN" max="{{ pagination.pages }}" value="{{ pagination.page }}" style="width:8ch;">
                   of {{ pagination.pages }}
 				(records {{ pagination.first }} to {{ pagination.last }}) 
 
-				<button id="gopageNext" {% if not pagination.has_next %}disabled {% endif %}>
-                    <img>
+				<button id="gopageNext" type="button" {% if not pagination.has_next %}disabled {% endif %}>
                     page {{ pagination.next_num }}
                     <i class="bi bi-arrow-right"></i>
                 </button>
-				<button id="gopageLast" {% if not pagination.has_next %}disabled {% endif %}>
+				<button id="gopageLast" type="button" {% if not pagination.has_next %}disabled {% endif %}>
                     Last page
                     <i class="bi bi-skip-forward"></i>
                 </button>
 				<br>
-				<input type="number" id="per-page" max={{ max_listrecs }} value={{ pagination.per_page }} style="width:8ch;"> records per page
+				<input type="number" id="per-page" max="{{ max_listrecs }}" value="{{ pagination.per_page }}" style="width:8ch;"> records per page
             </span>
         </div>
+        </div>
+    </div>
+    <hr>
+    <div class="container">
         <div class="row mx-auto max-width=100%">
             <div class="col-2">
                 <button id="add_btn" type="button">

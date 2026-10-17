@@ -12,7 +12,6 @@ from flask_login import login_required
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from calvincTools.mathexpr_parser import eval_arith
 from calvincTools.utils import checkTemplate_and_render
 from database import app_db
 from models import CountSchedule, MaterialList
@@ -33,6 +32,7 @@ def _get_max_listrecs() -> int:
 def _parse_post_int(name: str) -> int:
     raw_value = request.form.get(name, '').strip()
     if not raw_value:
+        #TODO: This helper aborts with HTTP 400 for missing values, but callers are catching ValueError to flash-and-redirect, so missing fields will bypass that handling and return a hard 400. Consider raising ValueError here (like _parse_post_date does) so the UI error flow is consistent.
         abort(400, f'Missing required field {name}.')
     try:
         parsed_value = int(raw_value)
@@ -69,13 +69,13 @@ def fnCountScheduleListView():
                 copy_count_to_date = _parse_post_date('copyCountToDate')
             except ValueError as ex:
                 flash(str(ex), 'error')
-                return redirect(url_for('WICS.CountScheduleList'))
+                return redirect(url_for('WICS.CountScheduleList', page=page, per_page=per_page))
 
             source_count = app_db.session.get(CountSchedule, copy_count_from_id)
             if source_count is None:
                 abort(404, f'Count record {copy_count_from_id} not found.')
 
-            # check to be sure schedule for the target date does not already exist
+            # TODO: check to be sure schedule for the target date does not already exist
 
             copied_count = CountSchedule(
                 CountDate=copy_count_to_date,
@@ -102,7 +102,7 @@ def fnCountScheduleListView():
                 delete_count_id = _parse_post_int('deleteCountid')
             except ValueError as ex:
                 flash(str(ex), 'error')
-                return redirect(url_for('WICS.CountScheduleList'))
+                return redirect(url_for('WICS.CountScheduleList', page=page, per_page=per_page))
 
             delete_count = app_db.session.get(CountSchedule, delete_count_id)
             if delete_count is None:
@@ -112,7 +112,7 @@ def fnCountScheduleListView():
             flash(f'Deleted count record {delete_count_id}.', 'success')
             return redirect(url_for('WICS.CountScheduleList', page=page, per_page=per_page))
 
-        abort(400, 'Unsupported Actual Count List operation.')
+        abort(400, 'Unsupported operation.')
 
     stmt = (
         select(CountSchedule)
