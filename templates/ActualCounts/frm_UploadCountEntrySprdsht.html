@@ -82,13 +82,6 @@ const form = document.getElementById("getUplSprsheet");
 let progressStream = null;
 
 /* ------ PHASE LIST ------ */
-/*
-const phaselist = ["init-upl", 
-    "01ReadSpreadsheet", 
-    "wantresults", "cleanup-after-failure", "resultspresented", "**FINAL**"
-    ];
-var currPhase = 0;
-*/
 // 1. The Immutable Enum Lookup
 const Phase = Object.freeze({
   INIT_UPL: "init-upl",
@@ -99,93 +92,7 @@ const Phase = Object.freeze({
   RESULTS_PRESENTED: "resultspresented",
   FINAL: "**FINAL**"
 });
-
-// 2. The Strict Order Array (Using the Enum values directly)
-const PHASE_ORDER = Object.freeze([
-  Phase.INIT_UPL,
-  Phase.READ_SPREADSHEET,
-
-  Phase.WANT_RESULTS,
-  Phase.CLEANUP_FAILURE,
-  Phase.RESULTS_PRESENTED,
-  Phase.FINAL
-]);
-
-// 3. The State Manager Class
-class PhaseManager {
-  constructor(initialPhase = Phase.INIT_UPL) {
-    this.current = initialPhase;
-    this.showCurrentPhase();
-  }
-
-  // Get current phase
-  get() {
-    return this.current;
-  }
-
-  // Get current position index
-  get index() {
-    return PHASE_ORDER.indexOf(this.current);
-  }
-
-  // Advance by 1 step
-  next() {
-    const nextIndex = this.index + 1;
-    if (nextIndex < PHASE_ORDER.length) {
-      this.listCompletedPhase()
-      this.current = PHASE_ORDER[nextIndex];
-      this.showCurrentPhase();
-    }
-    return this.current;
-  }
-
-  // Skip directly to any specific phase safely
-  skipTo(targetPhase) {
-    if (PHASE_ORDER.includes(targetPhase)) {
-      this.listCompletedPhase()
-      this.current = targetPhase;
-      this.showCurrentPhase();
-    } else {
-      throw new Error(`Invalid phase: ${targetPhase}`);
-    }
-    return this.current;
-  }
-
-  // Check if a specific phase has already been passed
-  hasPassed(targetPhase) {
-    const targetIndex = PHASE_ORDER.indexOf(targetPhase);
-    return this.index > targetIndex;
-  }
-
-  // get the text of a specific phase
-  getPhaseText(targetPhase = this.current) {
-    if (PHASE_ORDER.includes(targetPhase)) {
-      return targetPhase;
-    } else {
-      throw new Error(`Invalid phase: ${targetPhase}`);
-    }
-  }
-  
-  // show completed phase in HTML element
-  listCompletedPhase() {
-    const element = phasesCompleteList;
-
-    if (element) {
-        const li = document.createElement("li");
-        li.textContent = this.getPhaseText(this.current);
-        phasesCompleteList.appendChild(li);
-    }
-  }
-  // show current phase in HTML element
-  showCurrentPhase() {
-    const element = phaseInput;
-
-    if (element) {
-        element.value = this.getPhaseText(this.current);
-    }
-  }
-}
-const uploadPhase = new PhaseManager();
+const uploadPhase = new PhaseManager(Phase, null, {phaseInput: phaseInput, phasesCompleteList: phasesCompleteList});
 
 /* ---------- SIMPLE HELPERS ---------- */
 
