@@ -6,7 +6,7 @@
     {% if changed_data.main|count > 0 %}
         <div class="alert alert-success p-0 alert-dismissible fade show">
             <button type="button" class="btn-close p-0" data-bs-dismiss="alert"></button>
-            Count record { { put record number here } } successfully saved.
+            Count record {{ svdRecID }} successfully saved.
             <span class="d-none d-md-inline">
             ChData: {{ changed_data.main }}
             </span>

@@ -74,6 +74,8 @@ def fnCountEntryView(
         'schedule': []
         }
 
+    svdRecID = None
+
     # if request.method == 'POST' and mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
     if mainFm.validate_on_submit() and matlSubFm.validate_on_submit(): # and schedSet.validate_on_submit():
         postedRecNum = int(mainFm.id.data or 0)
@@ -100,6 +102,7 @@ def fnCountEntryView(
                 matlchoiceForm={'gotoItem': '', 'choicelist': []},
                 noSchedInfo=True,
                 frmSchedInfo=schedSet,
+                svdRecID=svdRecID,
                 changed_data=chgd_dat,
             )
 
@@ -124,6 +127,7 @@ def fnCountEntryView(
         if chgd_dat['main']:
             app_db.session.add(currRec)
             app_db.session.commit()
+        svdRecID = currRec.id
 
         # Description is display-only in this subform; keep persisted value on POST.
         if hasattr(matlSubFm, 'Description'):
@@ -256,6 +260,7 @@ def fnCountEntryView(
             'matlchoiceForm':matlchoiceForm,
             'noSchedInfo':(not schedinfo),
             'frmSchedInfo': schedFm,
+            'svdRecID': svdRecID,
             'changed_data': chgd_dat,
             }
     templt = 'ActualCounts/frm_CountEntry.html'
